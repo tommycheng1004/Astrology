@@ -1,0 +1,10 @@
+# Netlify 會自動偵測 Next.js 並套用官方的 Next.js 執行環境（OpenNext），不需要另外安裝外掛。
+# 環境變數（金鑰）不要寫在這裡，請在 Netlify 後台設定，步驟見 docs/netlify-deploy.md。
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next.js 16 需要 Node 20.9 以上；固定版本避免 Netlify 預設值變動
+  NODE_VERSION = "24"

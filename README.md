@@ -13,6 +13,10 @@ npm run build && npm start   # 正式建置
 
 技術：Next.js 16（App Router、Turbopack）、React 19、TypeScript、Tailwind CSS v4。靜態頁為主，只有 `/api/ask`（AI 問答）在伺服器執行。
 
+## 部署（Netlify）
+
+建置設定在 `netlify.toml`（Netlify 自動套用 Next.js 執行環境）。環境變數清單與步驟見 [docs/netlify-deploy.md](docs/netlify-deploy.md)。
+
 ## 會員（Firebase）
 
 Google 登入與 Email 註冊、「我的命盤」雲端同步、AI 每日題數。設定步驟見 [docs/firebase-setup.md](docs/firebase-setup.md)；沒設定時網站照舊運作、不顯示登入。

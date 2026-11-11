@@ -6,7 +6,7 @@
 沒做完這些設定之前，網站照舊運作，只是不會出現登入按鈕。
 
 ---
-
+   
 ## 1. 建立 Firebase 專案
 
 1. 打開 <https://console.firebase.google.com>，按「建立專案」。
@@ -79,7 +79,7 @@ FIREBASE_PRIVATE_KEY="（private_key，整段含 -----BEGIN PRIVATE KEY----- 到
 
 ## 6. 設定 Netlify
 
-Netlify 網站 →「Site configuration」→「Environment variables」，把第 4、5 步的六個值都加進去：
+Netlify 網站 →「Site configuration」→「Environment variables」，把第 4、5 步的六個值都加進去（完整的部署步驟與其他變數見 [netlify-deploy.md](netlify-deploy.md)）：
 
 | 變數 | 說明 |
 | --- | --- |
