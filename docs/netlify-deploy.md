@@ -53,8 +53,12 @@
 
 ### 如果建置因為「secret」失敗
 
-Netlify 會掃描建置結果，看到像金鑰的字串就擋下。Firebase 的 `NEXT_PUBLIC_FIREBASE_API_KEY`（`AIza` 開頭）本來就是公開的，可能被誤判。
-處理方式：新增環境變數 `SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES`，值填**同一把 Firebase API key**，再重新部署。
+Netlify 會掃描建置結果，看到 secret 的值出現在網頁裡就擋下。Firebase 的四個 `NEXT_PUBLIC_FIREBASE_*` 本來就是公開的：
+
+- **「Secret env var … detected」**：`netlify.toml` 已用 `SECRETS_SCAN_OMIT_KEYS` 排除這四個名稱，不用處理。
+  （Netlify 的 secret 標記一旦勾了就不能取消，所以用排除的方式。）
+- **「likely secret」（智慧偵測）**：新增環境變數 `SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES`，值填**同一把 Firebase API key**，再重新部署。
+
 不要用 `SECRETS_SCAN_ENABLED=false` 整個關掉，那樣 Gemini 金鑰外洩時也不會被攔下。
 
 ## 4. 部署後

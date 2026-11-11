@@ -8,3 +8,7 @@
 [build.environment]
   # Next.js 16 需要 Node 20.9 以上；固定版本避免 Netlify 預設值變動
   NODE_VERSION = "24"
+  # Firebase 的前端設定本來就會寫進網頁（公開值，安全性靠 Firestore 安全規則與授權網域），
+  # 若在 Netlify 後台被標成 secret，掃描會誤判外洩而讓建置失敗，所以排除這幾個「名稱」。
+  # 只列 NEXT_PUBLIC_ 開頭的公開值；GEMINI_API_KEY、FIREBASE_PRIVATE_KEY 仍會被掃描保護。
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_APP_ID"
