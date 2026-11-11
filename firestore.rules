@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// 紫微命盤的 Firestore 安全規則。修改後到 Firebase 後台「Firestore → 規則」貼上發布，
+// 或執行 firebase deploy --only firestore:rules。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedInAs(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // 「我的命盤」的格式，與 src/components/BirthForm.tsx 的 SavedBirth 一致
+    function validInput(i) {
+      return i is map
+        && i.keys().hasOnly(['name', 'gender', 'calendar', 'year', 'month', 'day', 'isLeapMonth', 'timeIndex'])
+        && i.keys().hasAll(['name', 'gender', 'calendar', 'year', 'month', 'day', 'isLeapMonth', 'timeIndex'])
+        && i.name is string && i.name.size() <= 20
+        && i.gender in ['男', '女']
+        && i.calendar in ['solar', 'lunar']
+        && i.year is int && i.year >= 1900 && i.year <= 2100
+        && i.month is int && i.month >= 1 && i.month <= 12
+        && i.day is int && i.day >= 1 && i.day <= 31
+        && i.isLeapMonth is bool
+        && i.timeIndex is int && i.timeIndex >= 0 && i.timeIndex <= 12;
+    }
+
+    function validChart(d) {
+      return d.keys().hasOnly(['saved', 'at']) && d.keys().hasAll(['saved', 'at'])
+        && d.at is int
+        && d.saved is map
+        && d.saved.keys().hasOnly(['input', 'timeMode', 'clock', 'place', 'trueSolar'])
+        && d.saved.keys().hasAll(['input', 'timeMode', 'clock', 'place', 'trueSolar'])
+        && validInput(d.saved.input)
+        && d.saved.timeMode in ['clock', 'slot']
+        && d.saved.clock is string && d.saved.clock.size() <= 5
+        && d.saved.place is string && d.saved.place.size() <= 32
+        && d.saved.trueSolar is bool;
+    }
+
+    // 每個人只能讀寫自己的命盤
+    match /users/{uid}/charts/{chartId} {
+      allow read, delete: if signedInAs(uid);
+      allow create, update: if signedInAs(uid) && chartId.matches('^[0-9a-z]{1,16}$') && validChart(request.resource.data);
+    }
+
+    // 其他資料（包含 AI 每日用量 usage/）只有伺服器的服務帳戶能讀寫，服務帳戶不受這些規則限制
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

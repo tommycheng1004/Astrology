@@ -1,0 +1,34 @@
+{
+  "name": "astrology",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "font:subset": "node scripts/subset-font.mjs",
+    "font:check": "node scripts/subset-font.mjs --check"
+  },
+  "dependencies": {
+    "@google/genai": "^2.32.0",
+    "firebase": "13.1.0",
+    "iztro": "^2.6.5",
+    "jose": "6.2.13",
+    "lunar-lite": "^0.2.8",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "subset-font": "^2.9.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

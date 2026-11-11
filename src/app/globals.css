@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f5f0e6;
+  --surface: #fffdf8;
+  --surface-2: #f0e9db;
+  --ink: #221c18;
+  --ink-soft: #4d443d;
+  --muted: #6e645a;
+  --line: #ddd2bf;
+  --line-strong: #bfae90;
+  --accent: #5b3a8c;
+  --accent-soft: #ede5f6;
+  --gold: #7d5e26;
+  --star-major: #5b2a86;
+  --star-soft: #2c6a63;
+  --star-tough: #93412f;
+  --lu: #276c44;
+  --quan: #9a5217;
+  --ke: #2a68a8;
+  --ji: #c0392b;
+  --focus: #5b3a8c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #13111a;
+    --surface: #1b1823;
+    --surface-2: #24202e;
+    --ink: #ede7db;
+    --ink-soft: #c9c0b1;
+    --muted: #9a91a4;
+    --line: #332e3e;
+    --line-strong: #4a4358;
+    --accent: #b9a0e6;
+    --accent-soft: #2b2340;
+    --gold: #d2b26c;
+    --star-major: #d5b9ff;
+    --star-soft: #7fc7bc;
+    --star-tough: #e39a85;
+    --lu: #48a970;
+    --quan: #d07a32;
+    --ke: #62a0e6;
+    --ji: #f06a55;
+    --focus: #b9a0e6;
+  }
+}
+
+/* 色彩皆以 WCAG 對比 4.5:1 為下限調整過，改色前請重新量測 */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-gold: var(--gold);
+  --color-star-major: var(--star-major);
+  --color-star-soft: var(--star-soft);
+  --color-star-tough: var(--star-tough);
+  --color-lu: var(--lu);
+  --color-quan: var(--quan);
+  --color-ke: var(--ke);
+  --color-ji: var(--ji);
+  --font-serif: var(--font-noto-serif-tc), "Songti TC", "PMingLiU", serif;
+  --font-sans: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+/* 鍵盤操作時，被聚焦的元素不能被固定的分頁列遮住（WCAG 2.2 2.4.11） */
+html:has([data-sticky-tabs]) {
+  scroll-padding-top: 6.5rem;
+}
+
+@media (max-width: 767.98px) {
+  html:has([data-bottom-tabs]) {
+    scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+
+  /* 底部分頁列固定在畫面上，頁尾要留出它的高度，否則最後一排連結會被蓋住 */
+  body:has([data-bottom-tabs]) {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
+body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 15% 0%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 45%),
+    radial-gradient(circle at 90% 20%, color-mix(in oklab, var(--gold) 8%, transparent), transparent 40%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.vertical {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.02em;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* AI 正在輸入的三個點 */
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
