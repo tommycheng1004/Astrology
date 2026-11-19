@@ -47,13 +47,15 @@ const GRADE_TEXT: Record<Grade, string> = {
 type Props = {
   astrolabe: Astrolabe;
   input: BirthInput;
+  rulesText: string;
   now: Selection;
   /** 一開始要看的流年（例如從 2027 流年頁進來）；不在可推算範圍內就看今年 */
   initialYear?: number;
+  initialLevel?: Level;
 };
 
-export default function FortuneExplorer({ astrolabe, input, now, initialYear }: Props) {
-  const [scale, setScale] = useState<Level>("yearly");
+export default function FortuneExplorer({ astrolabe, input, rulesText, now, initialYear, initialLevel = "yearly" }: Props) {
+  const [scale, setScale] = useState<Level>(initialLevel);
   const [sel, setSel] = useState<Selection>(() => {
     const birth = astrolabe.rawDates.lunarDate.lunarYear;
     return initialYear && initialYear !== now.year && initialYear > birth && initialYear < birth + MAX_AGE
@@ -415,10 +417,11 @@ export default function FortuneExplorer({ astrolabe, input, now, initialYear }: 
             <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </summary>
-        <div className="grid gap-5 border-t border-line p-3 sm:p-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid gap-5 border-t border-line p-3 sm:p-5 lg:grid-cols-[minmax(0,1fr)_300px]">
           <ChartBoard
             astrolabe={astrolabe}
             input={input}
+            rulesText={rulesText}
             selectedIndex={selectedIndex}
             horoscope={horoscope}
             lens={scale}

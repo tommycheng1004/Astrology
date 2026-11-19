@@ -147,6 +147,9 @@ export default async function LiunianPage({ params }: PageProps<"/liunian/[year]
           <p className="mt-3 text-sm leading-relaxed text-muted">
             犯太歲是民俗說法，台灣習俗會在農曆正月到廟裡安太歲，求個心安。紫微斗數看的是流年落在你命盤的宮位與四化，比生肖更細，可以合參。
           </p>
+          <Link href={`/taisui/${year}`} className="inline-flex min-h-11 items-center font-bold text-accent underline underline-offset-4">
+            查看十二生肖太歲關係
+          </Link>
         </section>
 
         <section aria-labelledby="sihua" className="mt-12 max-w-[42em]">

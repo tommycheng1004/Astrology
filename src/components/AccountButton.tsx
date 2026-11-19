@@ -1,11 +1,14 @@
 "use client";
 
+import DeepReportNotice from "@/components/DeepReportNotice";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import {
+  ACCOUNT_CLOSE_EVENT,
   ACCOUNT_OPEN_EVENT,
   accountServerSnapshot,
   accountSnapshot,
+  closeAccountDialog,
   isInAppBrowser,
   loadAccount,
   refreshVerification,
@@ -40,8 +43,13 @@ export default function AccountButton() {
   useEffect(() => {
     restoreAccount();
     const open = () => openDialog();
+    const close = () => dialogRef.current?.close();
     window.addEventListener(ACCOUNT_OPEN_EVENT, open);
-    return () => window.removeEventListener(ACCOUNT_OPEN_EVENT, open);
+    window.addEventListener(ACCOUNT_CLOSE_EVENT, close);
+    return () => {
+      window.removeEventListener(ACCOUNT_OPEN_EVENT, open);
+      window.removeEventListener(ACCOUNT_CLOSE_EVENT, close);
+    };
   }, []);
 
   if (!account.enabled) return null;
@@ -80,6 +88,7 @@ export default function AccountButton() {
   const user = account.user;
   return (
     <>
+      {user && <DeepReportNotice key={user.uid} uid={user.uid} />}
       <button
         type="button"
         onClick={openDialog}
@@ -120,6 +129,7 @@ export default function AccountButton() {
 
           {user ? (
             <SignedIn
+              key={user.uid}
               user={user}
               syncText={
                 account.sync === "syncing"
@@ -291,6 +301,7 @@ function SignedIn({
       {message}
 
       <p className="mt-4 rounded-lg bg-surface-2/60 px-3.5 py-2.5 text-sm text-ink-soft">{syncText}</p>
+      <Link href="/account" onClick={() => closeAccountDialog()} className="action-primary mt-4 w-full">前往會員中心</Link>
       <button
         type="button"
         onClick={onSignOut}

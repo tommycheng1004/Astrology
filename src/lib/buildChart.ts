@@ -3,7 +3,7 @@ import { resolveBirth, type ResolvedBirth } from "@/lib/birthtime";
 import { analyzeNatal, type AspectResult } from "@/lib/fortune";
 import { nowSelection, type Selection } from "@/lib/periods";
 import { bodyPalaceText, soulPersona } from "@/lib/personality";
-import { computeAstrolabe, TIME_SLOTS, type Astrolabe, type BirthInput } from "@/lib/ziwei";
+import { chartRulesText, computeAstrolabe, TIME_SLOTS, type Astrolabe, type BirthInput } from "@/lib/ziwei";
 
 /**
  * 排盤與解讀的進入點。首頁只在使用者按下排盤時才載入這個模組（連同 iztro、解讀資料），
@@ -15,6 +15,7 @@ export type Chart = {
   input: BirthInput;
   saved: SavedBirth;
   resolved: ResolvedBirth;
+  rulesText: string;
   /** main：依輸入時間排盤；alt：時辰交界時改看相鄰時辰 */
   variant: "main" | "alt";
   /** form：自己輸入；share：從分享連結開啟（不自動存進「我的命盤」） */
@@ -33,6 +34,7 @@ export async function buildChart(saved: SavedBirth, variant: Chart["variant"], s
     input: saved.input,
     saved,
     resolved,
+    rulesText: chartRulesText(resolved.trueSolarApplied),
     variant: useAlt ? "alt" : "main",
     source,
     astrolabe,

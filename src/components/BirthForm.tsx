@@ -153,7 +153,7 @@ export default function BirthForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-line bg-surface/90 p-5 shadow-[0_1px_0_var(--line),0_20px_50px_-30px_rgba(40,20,60,0.35)] backdrop-blur sm:p-7"
+      className="rounded-2xl border border-line bg-surface/90 p-4 shadow-[0_1px_0_var(--line),0_20px_50px_-30px_rgba(40,20,60,0.35)] backdrop-blur sm:p-7"
     >
       <Heading className="font-serif text-xl font-bold tracking-wide">{title}</Heading>
       <p className="mt-1 text-sm text-muted">{note}</p>
@@ -166,20 +166,7 @@ export default function BirthForm({
         </p>
       )}
 
-      <div className="mt-6 space-y-5">
-        <Field label="姓名" htmlFor={`${id}-name`} hint="選填">
-          <input
-            id={`${id}-name`}
-            type="text"
-            maxLength={20}
-            autoComplete="off"
-            placeholder="例如：王小明"
-            value={form.name}
-            onChange={(e) => update("name", e.target.value)}
-            className={inputClass}
-          />
-        </Field>
-
+      <div className="mt-4 space-y-4 sm:mt-6 sm:space-y-5">
         <div className="grid grid-cols-2 gap-4">
           <Field label="性別" as="fieldset">
             <div ref={genderRef}>
@@ -374,6 +361,18 @@ export default function BirthForm({
             )}
           </div>
         )}
+        <Field label="姓名" htmlFor={`${id}-name`} hint="選填">
+          <input
+            id={`${id}-name`}
+            type="text"
+            maxLength={20}
+            autoComplete="off"
+            placeholder="例如：王小明"
+            value={form.name}
+            onChange={(e) => update("name", e.target.value)}
+            className={inputClass}
+          />
+        </Field>
       </div>
 
       <button

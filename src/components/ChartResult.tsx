@@ -1,7 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import ChartHighlights from "@/components/ChartHighlights";
+import ChartShare from "@/components/ChartShare";
+import ChartReports from "@/components/ChartReports";
 import ChartBoard from "@/components/ChartBoard";
 import DayPicker from "@/components/DayPicker";
 import FortuneExplorer from "@/components/FortuneExplorer";
@@ -13,7 +16,6 @@ import { PLACES, slotName } from "@/lib/birthtime";
 import type { Chart } from "@/lib/buildChart";
 import { nowSelection } from "@/lib/periods";
 import { chartId, type SavedChart } from "@/lib/savedCharts";
-import { lineShareHref, shareUrl } from "@/lib/shareLink";
 import { formatBirthSummary, MUTAGEN_STYLE, palaceTitle, rocYear, TIME_SLOTS } from "@/lib/ziwei";
 
 type View = "chart" | "fortune" | "days" | "synastry" | "ai";
@@ -41,26 +43,28 @@ type Props = {
   onSave: () => void;
   /** 從流年頁（?liunian=2027）進來時，排盤後直接打開那一年的年運 */
   initialYear?: number;
+  initialToday?: boolean;
 };
 
 /** 排盤結果（命盤、運勢、擇日、合盤四個分頁）。只在排盤後才載入 */
-export default function ChartResult({ chart: initialChart, loading, isSaved, savedCharts, onSwitchVariant, onEditBirth, onSave, initialYear }: Props) {
+export default function ChartResult({ chart: initialChart, loading, isSaved, savedCharts, onSwitchVariant, onEditBirth, onSave, initialYear, initialToday }: Props) {
   const [chart, setChart] = useState(initialChart);
-  const [view, setView] = useState<View>(initialYear ? "fortune" : "chart");
+  const [view, setView] = useState<View>(initialYear || initialToday ? "fortune" : "chart");
+  const [fortuneOpened, setFortuneOpened] = useState(!!(initialYear || initialToday));
+  const [todayRequest, setTodayRequest] = useState(initialToday ? 1 : 0);
+  const [chartFirst, setChartFirst] = useState(() => {
+    try { return localStorage.getItem("ziwei:chart-first") === "1"; } catch { return false; }
+  });
+  const [detailsSeen, setDetailsSeen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(() => chart.astrolabe.palaces.find((p) => p.name === "命宮")?.index ?? 0);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [status, setStatus] = useState("");
-  const [busy, setBusy] = useState<"share" | "image" | null>(null);
-  /** 產生好的命盤圖片。分享要在使用者再按一次時才呼叫：產圖要時間，Safari 會判定已不是使用者操作而拒絕分享 */
-  const [image, setImage] = useState<{ file: File; url: string } | null>(null);
-  useEffect(() => () => {
-    if (image) URL.revokeObjectURL(image.url);
-  }, [image]);
   const resultRef = useRef<HTMLElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  useLayoutEffect(() => {
+    const result = resultRef.current;
+    result?.querySelector("h2")?.focus({ preventScroll: true });
+    result?.scrollIntoView({ block: "start" });
   }, []);
 
   /** 點宮位：桌機在右側面板顯示，手機改從底部滑出 */
@@ -71,13 +75,14 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
 
   function showPalace(index: number) {
     setSelectedIndex(index);
-    chartRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    requestAnimationFrame(() => chartRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   function switchView(next: View) {
     setView(next);
     // 頁面開著跨過時辰或午夜時，「現在」要跟著更新
     if (next === "fortune") {
+      setFortuneOpened(true);
       const now = nowSelection(chart.astrolabe);
       if (JSON.stringify(now) !== JSON.stringify(chart.now)) setChart({ ...chart, now });
     }
@@ -100,146 +105,107 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
     e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[target]?.focus();
   }
 
-  async function share() {
-    const url = shareUrl(chart.saved);
-    setBusy("share");
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "我的紫微命盤", url });
-        setStatus("");
-      } else {
-        await navigator.clipboard.writeText(url);
-        setStatus("已複製分享連結。連結裡有出生日期與時間（不含姓名），只傳給信任的人。");
-      }
-    } catch (e) {
-      if ((e as Error).name !== "AbortError") setStatus("無法分享，請直接複製網址列的連結。");
-    } finally {
-      setBusy(null);
-    }
+  function changeStartView(checked: boolean) {
+    setChartFirst(checked);
+    try { localStorage.setItem("ziwei:chart-first", checked ? "1" : "0"); } catch {}
   }
 
-  async function saveImage() {
-    setBusy("image");
-    setStatus("");
-    try {
-      const { renderChartImage } = await import("@/lib/chartImage");
-      const blob = await renderChartImage(chart.astrolabe, chart.input.name);
-      const file = new File([blob], `紫微命盤-${chart.input.name || chart.astrolabe.solarDate}.png`, { type: "image/png" });
-      setImage({ file, url: URL.createObjectURL(file) });
-    } catch {
-      setStatus("圖片產生失敗，請再試一次。");
-    } finally {
-      setBusy(null);
-    }
+  function showToday() {
+    setTodayRequest((request) => request + 1);
+    switchView("fortune");
   }
 
-  async function shareImage() {
-    if (!image) return;
-    try {
-      await navigator.share({ files: [image.file] });
-    } catch (e) {
-      if ((e as Error).name !== "AbortError") setStatus("無法分享，請改用「下載圖片」，或長按圖片儲存。");
-    }
-  }
+  const board = (
+    <div ref={chartRef} className="grid min-w-0 scroll-mt-24 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div>
+        <ChartBoard
+          astrolabe={chart.astrolabe}
+          input={chart.input}
+          rulesText={chart.rulesText}
+          selectedIndex={selectedIndex}
+          horoscope={null}
+          lens="natal"
+          onSelect={selectPalace}
+        />
+        <Legend />
+      </div>
+      <div className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
+        <PalaceDetail astrolabe={chart.astrolabe} selectedIndex={selectedIndex} horoscope={null} lens="natal" onSelect={setSelectedIndex} />
+      </div>
+    </div>
+  );
 
   return (
-    <section ref={resultRef} aria-label="排盤結果" className="mx-auto w-full max-w-6xl scroll-mt-2 px-3 pb-12 sm:px-6 md:pb-16">
-      <div className="flex flex-wrap items-end justify-between gap-3 px-1">
-        <div>
-          <h2 className="font-serif text-2xl font-bold tracking-wide sm:text-3xl">
-            {chart.source === "share" ? "分享的命盤" : chart.input.name ? `${chart.input.name}的命盤` : "你的命盤"}
-          </h2>
-          <p className="mt-1 text-sm text-muted">
-            {birthLine(chart)}
-            <button type="button" onClick={onEditBirth} className="ml-2 inline-flex min-h-11 items-center text-accent underline underline-offset-4">
-              修改生辰
-            </button>
-          </p>
-          {chart.variant === "main" && chart.resolved.notes.length > 0 && (
-            <p className="mt-1 text-sm text-gold">
-              已校正：以 {chart.resolved.usedClock ? `${chart.resolved.usedClock} ` : ""}
-              {slotName(chart.resolved.timeIndex)}排盤
-            </p>
+    <section ref={resultRef} aria-label="排盤結果" className="mx-auto w-full max-w-[60rem] scroll-mt-2 px-3 pt-3 pb-12 sm:px-6 md:pt-5 md:pb-16">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h2 tabIndex={-1} className="chart-result-heading min-w-0 break-words font-serif text-xl font-bold tracking-wide sm:text-2xl">
+          {chart.source === "share" ? "分享的命盤" : chart.input.name ? `${chart.input.name}的命盤` : "你的命盤"}
+        </h2>
+        <div className="flex max-w-full flex-wrap items-center gap-x-1">
+          {isSaved ? (
+            <span role="status" className="px-2 text-xs font-medium text-ink-soft">已存到我的命盤</span>
+          ) : (
+            <button type="button" className="action-primary" onClick={onSave}>存到我的命盤</button>
           )}
-        </div>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-          {!isSaved && (
-            <button type="button" onClick={onSave} className={`${actionClass} border-accent text-accent`}>
-              存到我的命盤
-            </button>
-          )}
-          <button type="button" onClick={share} disabled={busy !== null} className={actionClass}>
-            分享連結
-          </button>
-          {/* LINE 是台灣最常用的通訊軟體：手機開 LINE 的分享畫面，電腦開 LINE 的網頁分享 */}
-          <a href={lineShareHref(chart.saved)} target="_blank" rel="noopener noreferrer" className={`${actionClass} inline-flex items-center justify-center`}>
-            傳到 LINE
-          </a>
-          <button type="button" onClick={saveImage} disabled={busy !== null} className={actionClass}>
-            {busy === "image" ? "產生中…" : "存成圖片"}
-          </button>
+          <ChartShare chart={chart} />
         </div>
       </div>
-      <p role="status" className="mt-2 px-1 text-sm text-ink-soft empty:hidden">
-        {status}
-      </p>
-
-      {image && (
-        <figure className="mt-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
-          {/* eslint-disable-next-line @next/next/no-img-element -- 瀏覽器端產生的 blob 圖片，不經 Next 圖片最佳化 */}
-          <img src={image.url} alt="命盤圖片預覽" className="mx-auto max-h-[60vh] w-auto rounded-lg border border-line" />
-          <figcaption className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="mr-auto text-sm text-muted">手機可長按圖片存到相簿</span>
-            {typeof navigator !== "undefined" && navigator.canShare?.({ files: [image.file] }) && (
-              <button type="button" onClick={shareImage} className={`${actionClass} border-accent text-accent`}>
-                分享圖片
-              </button>
-            )}
-            <a href={image.url} download={image.file.name} className={`${actionClass} inline-flex items-center`}>
-              下載圖片
-            </a>
-            <button type="button" onClick={() => setImage(null)} className={actionClass}>
-              關閉
-            </button>
-          </figcaption>
-        </figure>
-      )}
-
-      {chart.resolved.alt && <BoundaryNotice chart={chart} loading={loading} onSwitch={onSwitchVariant} />}
 
       {/* 桌機：分頁列固定在上方 */}
       <div data-sticky-tabs className="sticky top-0 z-30 mt-5 hidden bg-[linear-gradient(var(--paper)_75%,transparent)] pt-2 pb-3 md:block">
-        <div role="tablist" aria-label="結果分頁" onKeyDown={onTabKeyDown} className="grid gap-1 rounded-2xl border border-line bg-surface p-1.5 shadow-sm" style={{ gridTemplateColumns: `repeat(${VIEWS.length}, minmax(0, 1fr))` }}>
+        <div role="tablist" aria-label="結果分頁" onKeyDown={onTabKeyDown} className="grid gap-1 border-b border-line" style={{ gridTemplateColumns: `repeat(${VIEWS.length}, minmax(0, 1fr))` }}>
           {VIEWS.map((v) => (
             <ViewTab key={v.id} active={view === v.id} onClick={() => switchView(v.id)} title={v.title} sub={v.sub} />
           ))}
         </div>
       </div>
 
-      <div hidden={view !== "chart"} className="mt-5 space-y-10 md:mt-1">
-        <div ref={chartRef} className="grid scroll-mt-24 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div>
-            <ChartBoard
-              astrolabe={chart.astrolabe}
-              input={chart.input}
-              selectedIndex={selectedIndex}
-              horoscope={null}
-              lens="natal"
-              onSelect={selectPalace}
-            />
-            <Legend />
+      <div hidden={view !== "chart"} className="mt-4 space-y-5 md:mt-1 sm:space-y-6">
+        {chartFirst && board}
+        <ChartHighlights chart={chart} onToday={showToday} />
+        {!chartFirst && board}
+        <details className="border-y border-line px-1 text-sm">
+          <summary className="min-h-11 cursor-pointer py-3 font-medium text-ink-soft">生辰與顯示偏好</summary>
+          <div className="pb-3">
+            <p className="text-ink-soft">{birthLine(chart)}</p>
+            {chart.variant === "main" && chart.resolved.notes.length > 0 && (
+              <p className="mt-1 text-gold">已校正，採 {chart.resolved.usedClock ? `${chart.resolved.usedClock} ` : ""}{slotName(chart.resolved.timeIndex)} 排盤</p>
+            )}
+            <div className="flex flex-wrap items-center gap-x-3">
+              <button type="button" onClick={onEditBirth} className="action-text -ml-3">修改生辰</button>
+              <label className="flex min-h-11 items-center gap-2">
+                <input type="checkbox" checked={chartFirst} onChange={(e) => changeStartView(e.target.checked)} className="size-4 accent-accent" />
+                預設直接看命盤
+              </label>
+            </div>
           </div>
-          <div className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
-            <PalaceDetail astrolabe={chart.astrolabe} selectedIndex={selectedIndex} horoscope={null} lens="natal" onSelect={setSelectedIndex} />
-          </div>
+        </details>
+        {chart.resolved.alt && <BoundaryNotice chart={chart} loading={loading} onSwitch={onSwitchVariant} />}
+        <details
+          className="rounded-xl border border-line-strong px-3 sm:px-5"
+          onToggle={(event) => { if (event.currentTarget.open) setDetailsSeen(true); }}
+        >
+          <summary className="min-h-11 cursor-pointer py-3 font-serif text-lg font-bold">
+            完整命盤解讀 <span className="ml-1 font-sans text-xs font-normal text-ink-soft">格局、五運與十二宮</span>
+          </summary>
+          {detailsSeen && <div className="pb-5"><NatalReport astrolabe={chart.astrolabe} natal={chart.natal} onSelectPalace={showPalace} onOpenFortune={() => switchView("fortune")} /></div>}
+        </details>
+        <ChartReports chart={chart} />
+      </div>
+
+      {fortuneOpened && (
+        <div hidden={view !== "fortune"} className="mt-5 md:mt-1">
+          <FortuneExplorer
+            key={todayRequest}
+            astrolabe={chart.astrolabe}
+            input={chart.input}
+            rulesText={chart.rulesText}
+            now={chart.now}
+            initialYear={todayRequest ? undefined : initialYear}
+            initialLevel={todayRequest ? "daily" : "yearly"}
+          />
         </div>
-
-        <NatalReport astrolabe={chart.astrolabe} natal={chart.natal} onSelectPalace={showPalace} onOpenFortune={() => switchView("fortune")} />
-      </div>
-
-      <div hidden={view !== "fortune"} className="mt-5 md:mt-1">
-        <FortuneExplorer astrolabe={chart.astrolabe} input={chart.input} now={chart.now} initialYear={initialYear} />
-      </div>
+      )}
 
       {view === "days" && (
         <div className="mt-5 md:mt-1">
@@ -288,9 +254,6 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
     </section>
   );
 }
-
-const actionClass =
-  "h-11 rounded-lg border border-line bg-surface px-4 text-sm text-ink-soft transition hover:border-accent hover:text-accent disabled:opacity-60";
 
 function birthLine(chart: Chart) {
   const { input, saved } = chart;
@@ -348,10 +311,10 @@ function ViewTab({ active, onClick, title, sub }: { active: boolean; onClick: ()
       aria-selected={active}
       tabIndex={active ? 0 : -1}
       onClick={onClick}
-      className={`rounded-xl px-3 py-2 text-center transition ${active ? "bg-accent text-surface shadow-sm" : "text-ink-soft hover:bg-surface-2"}`}
+      className={`min-h-11 rounded-t-lg border-b-2 px-3 py-2 text-center transition ${active ? "border-accent bg-accent-soft text-accent" : "border-transparent text-ink-soft hover:bg-surface-2"}`}
     >
       <span className="block font-serif text-lg font-bold">{title}</span>
-      <span className={`block text-xs ${active ? "text-surface/80" : "text-muted"}`}>{sub}</span>
+      <span className="block text-xs text-muted">{sub}</span>
     </button>
   );
 }
@@ -417,7 +380,6 @@ function Legend() {
         <span className="font-serif text-star-soft">吉星</span>
         <span className="font-serif text-star-tough">煞星</span>
       </span>
-      <span>採通行版排法</span>
     </div>
   );
 }

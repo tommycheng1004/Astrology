@@ -109,6 +109,7 @@ type ChartTime = {
 export type ResolvedBirth = ChartTime & {
   /** 排盤實際採用的時間，例如 09:30；只知道時辰時為 null */
   usedClock: string | null;
+  trueSolarApplied: boolean;
   /** 給使用者看的校正說明 */
   notes: string[];
   /**
@@ -261,6 +262,7 @@ export function resolveBirth(input: BirthInput, options: BirthTimeOptions): Reso
       dateStr: `${date.getUTCFullYear()}-${date.getUTCMonth() + 1}-${date.getUTCDate()}`,
       timeIndex,
       usedClock: null,
+      trueSolarApplied: false,
       notes,
       alt: null,
     };
@@ -271,6 +273,7 @@ export function resolveBirth(input: BirthInput, options: BirthTimeOptions): Reso
   const original = hhmm(clockWall);
   let wall = clockWall;
   let otherWall: number | null = null;
+  let trueSolarApplied = false;
 
   if (place?.tz) {
     const standard = standardOffset(place, y);
@@ -300,6 +303,7 @@ export function resolveBirth(input: BirthInput, options: BirthTimeOptions): Reso
       notes.push(`${reason}，已將 ${original} 調回標準時間 ${hhmm(wall)}。`);
     }
     if (options.trueSolar) {
+      trueSolarApplied = true;
       const eot = equationOfTime(wall - standard * 60000);
       const before = hhmm(wall);
       wall += Math.round((lmt + eot) * 60000);
@@ -329,7 +333,7 @@ export function resolveBirth(input: BirthInput, options: BirthTimeOptions): Reso
     alt = { dateStr, timeIndex, minutes: Math.abs(distance), reason: "boundary" };
   }
 
-  return { dateStr: main.dateStr, timeIndex: main.timeIndex, usedClock: hhmm(wall), notes, alt };
+  return { dateStr: main.dateStr, timeIndex: main.timeIndex, usedClock: hhmm(wall), trueSolarApplied, notes, alt };
 }
 
 /** 時辰名稱（不帶早晚），例如「午時」 */

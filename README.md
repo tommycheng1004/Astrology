@@ -11,7 +11,7 @@ npm run dev                  # http://localhost:3000
 npm run build && npm start   # 正式建置
 ```
 
-技術：Next.js 16（App Router、Turbopack）、React 19、TypeScript、Tailwind CSS v4。靜態頁為主，只有 `/api/ask`（AI 問答）在伺服器執行。
+技術：Next.js 16（App Router、Turbopack）、React 19、TypeScript、Tailwind CSS v4。內容與報告頁外框採靜態建置。AI 問答、會員報告、行事曆與事件定盤由 `/api/*` 提供。
 
 ## 部署（Netlify）
 
@@ -22,10 +22,10 @@ npm run build && npm start   # 正式建置
 Google 登入與 Email 註冊、「我的命盤」雲端同步、AI 每日題數。設定步驟見 [docs/firebase-setup.md](docs/firebase-setup.md)；沒設定時網站照舊運作、不顯示登入。
 
 - 前端只在打開登入視窗或之前登入過時才載入 Firebase（`src/lib/account.ts`），同步用 Firestore Lite（`src/lib/cloudCharts.ts`）。
-- 伺服器不用 firebase-admin：`src/lib/server/firebase.ts` 以 jose 驗證 ID token、以 Firestore REST API 記錄每日題數。
+- 伺服器不用 firebase-admin：`src/lib/server/firebase.ts` 以 jose 驗證 ID token、以 Firestore REST API 儲存會員功能資料、AI 快取與每日題數。
   伺服器程式不可 import `firebase` 套件（它帶的 `@grpc/grpc-js` 有伺服器端漏洞公告，前端用不到）。
 - 安全規則在 `firestore.rules`，修改後要到 Firebase 後台發布，並跑 `npx tsx scripts/check-rules.ts`（需模擬器）。
-- 之後若加資安標頭，`Cross-Origin-Opener-Policy` 要用 `same-origin-allow-popups`，否則 Google 登入的彈出視窗會失效。
+- `Cross-Origin-Opener-Policy` 採用 `same-origin-allow-popups`，讓 Google 登入可開啟彈出視窗。
 
 ## 字型
 
@@ -40,8 +40,8 @@ npm run font:check    # 檢查子集是否已涵蓋所有用字
 
 ```bash
 npx tsx scripts/verify-chart.ts     # 以古法安星驗算 iztro 排盤（1900–2100 隨機 3,000 盤、33 項）
-npx tsx scripts/verify-lunar.ts     # 農曆曆表逐日比對
-npx tsx scripts/verify-periods.ts   # 以斗君古訣驗算流月、流日、流時、各層四化與流曜，並檢查擇日因人而異
+npx tsx scripts/verify-lunar.ts     # 農曆曆表逐日比對 73,384 天
+npx tsx scripts/verify-periods.ts   # 以斗君古訣驗算流月、流日、流時、各層四化與流曜共 2,480 組，並檢查擇日因人而異
 npx tsx scripts/check-readings.ts   # 解讀文字與格局的一致性
 npx tsx scripts/check-periods.ts    # 運勢卡片與詳情分數一致
 npx tsx scripts/check-birthtime.ts  # 出生時間校正、閏月、童限的回歸測試

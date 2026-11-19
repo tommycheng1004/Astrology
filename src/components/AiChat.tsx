@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { accountServerSnapshot, accountSnapshot, currentIdToken, openAccountDialog, subscribeAccount } from "@/lib/account";
+import { AI_SUGGESTIONS } from "@/lib/aiPrompt";
+import type { Fact } from "@/lib/chartFacts";
 import type { Chart } from "@/lib/buildChart";
 import { shareHash } from "@/lib/shareLink";
 
@@ -15,16 +17,7 @@ const CONSENT_KEY = "ziwei:ai-consent";
 const MAX_QUESTION = 300;
 const MAX_TURNS = 10;
 
-const SUGGESTIONS = [
-  "我適合什麼樣的工作？",
-  "今年的運勢重點是什麼？",
-  "我的感情要注意什麼？",
-  "目前這個大限怎麼走？",
-  "我的財運與理財建議",
-  "身體健康要留意哪些地方？",
-];
-
-type Turn = { role: "user" | "assistant"; content: string };
+type Turn = { role: "user" | "assistant"; content: string; facts?: Fact[]; filtered?: boolean };
 /** 伺服器回報的今日題數 */
 type QuotaInfo = { member: boolean; limit: number; remaining: number; memberLimit: number };
 
@@ -108,7 +101,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
     setAgreed(true);
   }
 
-  async function ask(question: string) {
+  async function ask(question: string, suggestion?: string) {
     const q = question.trim().slice(0, MAX_QUESTION);
     if (!q || busy || full) return;
     stickRef.current = true;
@@ -124,6 +117,8 @@ export default function AiChat({ chart }: { chart: Chart }) {
     let failure: string | null = null;
     let stop: string | null = null;
     let nextSig: string | null = null;
+    let facts: Fact[] | undefined;
+    let filtered = false;
     let nextQuota: QuotaInfo | null = null;
     try {
       const post = async (forceRefresh: boolean) => {
@@ -132,7 +127,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
         return fetch("/api/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
-          body: JSON.stringify({ birth: shareHash(chart.saved).slice(3), variant: chart.variant, messages: history, sig }),
+          body: JSON.stringify({ birth: shareHash(chart.saved).slice(3), variant: chart.variant, messages: history, sig, suggestion }),
           signal: controller.signal,
         });
       };
@@ -154,7 +149,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
           buffer = lines.pop() ?? "";
           for (const line of lines) {
             if (!line) continue;
-            const event = JSON.parse(line) as { t?: string; done?: boolean; stop?: string; sig?: string; error?: string; quota?: QuotaInfo };
+            const event = JSON.parse(line) as { t?: string; done?: boolean; stop?: string; sig?: string; error?: string; quota?: QuotaInfo; facts?: Fact[]; filtered?: boolean };
             if (event.t) {
               text += event.t;
               setAnswer(text);
@@ -163,6 +158,8 @@ export default function AiChat({ chart }: { chart: Chart }) {
             if (event.done) {
               stop = event.stop ?? null;
               nextSig = event.sig ?? null;
+              facts = event.facts;
+              filtered = !!event.filtered;
               if (event.quota) nextQuota = event.quota;
             }
           }
@@ -175,7 +172,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
     }
     if (stop === "refusal") failure = "這個問題 AI 無法回答，換個問法試試看。";
     if (text && nextSig && stop !== "refusal") {
-      setTurns([...history, { role: "assistant", content: text.trim() }]);
+      setTurns([...history, { role: "assistant", content: text.trim(), facts, filtered }]);
       setSig(nextSig);
     } else {
       // 沒有拿到回答：把問題放回輸入框，方便重問
@@ -230,7 +227,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
 
   // 還沒問過的建議問題，回答後當作「接著問」的選項
   const asked_ = new Set(turns.filter((t) => t.role === "user").map((t) => t.content));
-  const nextSuggestions = SUGGESTIONS.filter((x) => !asked_.has(x)).slice(0, turns.length ? 3 : 6);
+  const nextSuggestions = Object.entries(AI_SUGGESTIONS).filter(([, question]) => !asked_.has(question)).slice(0, turns.length ? 3 : 6);
 
   return (
     <>
@@ -313,11 +310,11 @@ export default function AiChat({ chart }: { chart: Chart }) {
               <div className="mb-4 pl-12">
                 <p className="mb-2 text-xs text-muted">{turns.length ? "也可以接著問" : "可以這樣問"}</p>
                 <ul className="flex flex-wrap gap-2">
-                  {nextSuggestions.map((x) => (
+                  {nextSuggestions.map(([code, x]) => (
                     <li key={x}>
                       <button
                         type="button"
-                        onClick={() => ask(x)}
+                        onClick={() => ask(x, code)}
                         className="min-h-11 rounded-full border border-accent/40 bg-surface px-4 text-[15px] text-accent transition hover:bg-accent-soft"
                       >
                         {x}
@@ -446,6 +443,15 @@ function Message({ turn, pending = false }: { turn: Turn; pending?: boolean }) {
             {p}
           </p>
         ))}
+        {turn.filtered && <p className="text-xs text-ink-soft">已移除與命盤資料不符的句子。</p>}
+        {!!turn.facts?.length && (
+          <details className="border-t border-line">
+            <summary className="flex min-h-11 cursor-pointer items-center font-bold text-accent">依據</summary>
+            <ul className="space-y-2 text-sm text-ink-soft">
+              {turn.facts.map((fact) => <li key={fact.id}>{fact.id} · {fact.layer} · {fact.text}</li>)}
+            </ul>
+          </details>
+        )}
       </div>
     </Tag>
   );

@@ -146,3 +146,79 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+@media print {
+  body:has(.report-print) {
+    background: white;
+    color: black;
+  }
+
+  body:has(.report-print) :is(header, footer, .report-actions) {
+    display: none !important;
+  }
+
+  .report-print {
+    max-width: none;
+    padding: 0;
+    color: black;
+  }
+
+  .report-print h2,
+  .report-print h3 {
+    break-after: avoid;
+  }
+
+  .report-keep {
+    break-inside: avoid;
+  }
+}
+
+@layer components {
+  .action-primary, .action-secondary, .action-text {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-bold transition disabled:opacity-60;
+  }
+
+  .action-primary {
+    @apply bg-accent text-surface hover:brightness-110;
+  }
+
+  .action-secondary {
+    @apply border border-line-strong bg-surface text-ink hover:border-accent hover:text-accent;
+  }
+
+  .action-text {
+    @apply text-accent hover:bg-accent-soft;
+  }
+}
+
+.ziwei-sky {
+  background-color: #251931;
+  background-image: linear-gradient(100deg, #20152be8 0%, #25193191 60%, #25193146 100%),
+    url("/ziwei-sky.webp");
+  background-position: center, center 20%;
+  background-size: cover;
+}
+
+body:has(.action-sheet[open]) {
+  overflow: hidden;
+}
+
+.action-sheet {
+  inset: auto 0 0;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .action-sheet {
+    inset: 0;
+    margin: auto;
+  }
+}
+
+.chart-result-heading:focus {
+  outline: none;
+}
+
+@keyframes summary-enter {
+  from { transform: translateY(5px); }
+}

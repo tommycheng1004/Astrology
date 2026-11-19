@@ -47,3 +47,7 @@ export function taisuiText(kinds: Taisui[]) {
 export function zodiacOf(branch: string) {
   return ZODIAC[BRANCHES.indexOf(branch)] ?? "";
 }
+
+export function taisuiTable(yearBranch: string) {
+  return [...BRANCHES].map((branch) => ({ zodiac: zodiacOf(branch), kinds: taisuiOf(branch, yearBranch) }));
+}

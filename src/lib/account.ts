@@ -31,6 +31,7 @@ export type AccountState = {
 
 const HINT_KEY = "ziwei:signed-in";
 const OPEN_EVENT = "ziwei:open-account";
+export const ACCOUNT_CLOSE_EVENT = "ziwei:close-account";
 
 const INITIAL: AccountState = { enabled: FIREBASE_ENABLED, ready: false, user: null, sync: "idle", syncedCount: 0 };
 let state = INITIAL;
@@ -256,6 +257,10 @@ export function openAccountDialog() {
   window.dispatchEvent(new Event(OPEN_EVENT));
 }
 export const ACCOUNT_OPEN_EVENT = OPEN_EVENT;
+
+export function closeAccountDialog() {
+  window.dispatchEvent(new Event(ACCOUNT_CLOSE_EVENT));
+}
 
 /** LINE、Facebook、Instagram 的內建瀏覽器：Google 不允許在這些 App 內登入（disallowed_useragent） */
 export function isInAppBrowser() {

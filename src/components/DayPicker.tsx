@@ -1,5 +1,7 @@
 "use client";
 
+import { accountSnapshot, openAccountDialog } from "@/lib/account";
+import { updateCalendar } from "@/components/MemberCalendar";
 import { useId, useMemo, useState } from "react";
 import FortuneList, { GRADE_BADGE } from "@/components/FortuneList";
 import { resolveBirth } from "@/lib/birthtime";
@@ -263,10 +265,38 @@ function DayListBody({
                   <FortuneList results={d.others} onSelectPalace={onSelectPalace} palaceVerb="流日落在的" />
                 </div>
               )}
+              {expanded && tone === "good" && <SaveCalendarDay date={d.date} />}
             </li>
           );
         })}
       </ul>
     </section>
+  );
+}
+
+function SaveCalendarDay({ date }: { date: string }) {
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    const { enabled, user } = accountSnapshot();
+    if (!enabled) return setStatus("行事曆目前尚未啟用。");
+    if (!user) return openAccountDialog();
+    setBusy(true);
+    try {
+      await updateCalendar("save", { date });
+      setStatus("已存到會員行事曆。");
+    } catch (error) {
+      setStatus((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-5 pb-3 text-sm">
+      <button type="button" disabled={busy} onClick={save} className="min-h-11 rounded-lg border border-line px-3 font-bold text-accent disabled:opacity-60">存到行事曆</button>
+      <span role="status">{status}</span>
+    </div>
   );
 }

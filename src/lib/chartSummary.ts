@@ -1,3 +1,4 @@
+import { chartFacts, factText } from "@/lib/chartFacts";
 import type { IFunctionalStar } from "iztro/lib/star/FunctionalStar";
 import { analyzeLayer, analyzeNatal, gradeOf, overallGradeOf, overallOf } from "@/lib/fortune";
 import { analyzePatterns } from "@/lib/patterns";
@@ -25,7 +26,11 @@ export function taiwanNow(now = new Date()) {
   return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
 }
 
-export function chartSummary(astrolabe: Astrolabe, now = new Date()) {
+export function chartSummary(astrolabe: Astrolabe, rulesText: string, now = new Date()) {
+  return summarizeChart(astrolabe, rulesText, now).summary;
+}
+
+export function summarizeChart(astrolabe: Astrolabe, rulesText: string, now = new Date()) {
   const lines: string[] = [];
   const tw = taiwanNow(now);
   // nowSelection 以本機時區計算，這裡改用台灣時間建出對應的 Date
@@ -33,12 +38,11 @@ export function chartSummary(astrolabe: Astrolabe, now = new Date()) {
   const twDate = new Date(ty, tm - 1, td, tw.hour);
   const sel = nowSelection(astrolabe, twDate);
 
-  lines.push("【基本資料】");
+  lines.push(`排盤規則：${rulesText}`, "", "【基本資料】");
   lines.push(
     `性別：${astrolabe.gender}（${astrolabe.gender === "男" ? "乾造" : "坤造"}）；五行局：${astrolabe.fiveElementsClass}；命主：${astrolabe.soul}；身主：${astrolabe.body}`,
   );
   lines.push(`四柱：${astrolabe.chineseDate}；農曆生日：${toTraditionalLunar(astrolabe.lunarDate)} ${astrolabe.time}；生肖：${astrolabe.zodiac}`);
-  lines.push("排盤規則：通行版安星與四化、農曆正月初一換年、晚子時以隔日子時排盤。");
 
   const birthMutagens = astrolabe.palaces
     .flatMap((p) => [...p.majorStars, ...p.minorStars])
@@ -117,5 +121,7 @@ export function chartSummary(astrolabe: Astrolabe, now = new Date()) {
     lines.push(`${c.title} ${c.sub}：${detail}${c.overall === null ? "" : `；${overallGradeOf(c.overall)}`}${c.tag ? `；${c.tag}` : ""}`);
   }
 
-  return lines.join("\n");
+  const evidence = chartFacts(astrolabe, h);
+  lines.push("", "【預先算好的事實】", ...evidence.facts.map(factText));
+  return { summary: lines.join("\n"), ...evidence };
 }

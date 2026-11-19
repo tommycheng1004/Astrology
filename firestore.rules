@@ -43,7 +43,7 @@ service cloud.firestore {
       allow create, update: if signedInAs(uid) && chartId.matches('^[0-9a-z]{1,16}$') && validChart(request.resource.data);
     }
 
-    // 其他資料（包含 AI 每日用量 usage/）只有伺服器的服務帳戶能讀寫，服務帳戶不受這些規則限制
+    // 報告、事件與行事曆設定、訂閱索引、AI 快取及用量一律透過各自的伺服器路由存取。
     match /{document=**} {
       allow read, write: if false;
     }

@@ -17,11 +17,6 @@ export const metadata: Metadata = pageMetadata({
 /** 建置當下要推的流年；瀏覽器會再依當天日期更新 */
 const BUILD_YEAR = featuredYear();
 
-const FEATURES = [
-  "國曆、農曆皆可輸入，自動校正夏令時間與閏月",
-  "格局判定、命宮性格、十二宮與五運解讀",
-  "大運到時運的運勢，加上紫微擇日與合盤配對",
-];
 
 const GUIDE = [
   {
@@ -72,7 +67,7 @@ const FAQ = [
   },
   {
     q: "我的生辰資料會被保存嗎？",
-    a: `排盤完全在你的瀏覽器中計算，不會上傳到伺服器。排過的命盤會存在你自己瀏覽器的「我的命盤」清單，可以隨時按「管理」刪除。${
+    a: `排盤完全在你的瀏覽器中計算，不會上傳到伺服器。按「存到我的命盤」後，會在瀏覽器的命盤清單看到資料，可以隨時按「管理」刪除。${
       FIREBASE_ENABLED ? "註冊或登入會員時，「我的命盤」會同步存到你的帳號，換裝置也看得到，只有你本人能讀取。" : ""
     }分享連結時，出生日期與時間放在網址的 # 之後，不會傳到伺服器，也不含姓名。${
       AI_ENABLED ? "只有使用「問 AI」時，才會把生辰（不含姓名）與你的提問送出，由 AI 產生回答；本站不保存對話內容。" : ""
@@ -128,29 +123,13 @@ export default function Home() {
       <ZiweiApp
         intro={
           <>
-            <h1>
-              <span className="block text-sm font-medium tracking-[0.3em] text-gold">紫微斗數・免費線上排盤</span>
-              <span className="sr-only">：</span>
-              <span className="mt-4 block font-serif text-4xl leading-tight font-bold tracking-wide text-balance sm:text-5xl">
-                看懂你的命盤，
-                <br />
-                從十二宮開始
-              </span>
-            </h1>
-            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-soft sm:mt-5 sm:text-lg">
-              輸入出生年月日與時間，立即排出完整的紫微斗數命盤。主星、輔星、四化、大限一次呈現，排盤結果清楚好讀。
+            <h1 className="font-serif text-[clamp(1.85rem,5vw,3rem)] leading-tight font-bold tracking-wide text-balance">紫微斗數免費排盤</h1>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-soft sm:mt-4 sm:text-base">
+              輸入生辰，看自己的個性、今年重點與今日運勢。
             </p>
-            <ul className="mt-7 hidden space-y-2.5 sm:block">
-              {FEATURES.map((f) => (
-                <li key={f} className="flex items-center gap-3 text-[15px] text-ink-soft">
-                  <span aria-hidden className="size-1.5 rotate-45 bg-gold" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <YearBanner buildYear={BUILD_YEAR} years={liunianYears()} />
           </>
         }
+        yearBanner={<YearBanner buildYear={BUILD_YEAR} years={liunianYears()} />}
         outro={<HomeGuide />}
       />
     </main>
@@ -166,9 +145,8 @@ function HomeGuide() {
           命盤怎麼看
         </h2>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {GUIDE.map((g, i) => (
+          {GUIDE.map((g) => (
             <article key={g.title} className="flex flex-col rounded-xl border border-line bg-surface/70 p-6">
-              <span className="font-serif text-sm text-gold">{["壹", "貳", "參"][i]}</span>
               <h3 className="mt-2 font-serif text-lg font-bold">{g.title}</h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-soft">{g.body}</p>
               <Link href={g.href} className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline">

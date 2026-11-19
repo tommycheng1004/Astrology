@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { SavedBirth } from "@/components/BirthForm";
+import EventRectification from "@/components/EventRectification";
 import type { TimeChoice } from "@/lib/buildChart";
 
 /**
@@ -9,11 +11,13 @@ import type { TimeChoice } from "@/lib/buildChart";
  */
 export default function TimeChooser({
   choices,
+  saved,
   loading,
   onPick,
   onCancel,
 }: {
   choices: TimeChoice[];
+  saved: SavedBirth;
   loading: boolean;
   onPick: (timeIndex: number) => void;
   onCancel: () => void;
@@ -49,6 +53,7 @@ export default function TimeChooser({
         </button>
       </div>
 
+      <div className="mt-6"><EventRectification saved={saved} onPick={onPick} /></div>
       <ul className="mt-6 grid gap-3 md:grid-cols-2">
         {choices.map((c) => (
           <li key={c.timeIndex} className="flex flex-col rounded-2xl border border-line bg-surface p-5">

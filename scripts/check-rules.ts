@@ -71,6 +71,10 @@ const withInput = (patch: object) => ({ ...chart, saved: { ...chart.saved, input
   check("命盤 id 格式不對不能寫", await request("PATCH", "users/alice/charts/ABC_bad", "alice", chart), false);
   check("使用者不能讀 AI 用量", await request("GET", "usage/2026-11-11_m_alice", "alice"), false);
   check("使用者不能改 AI 用量", await request("PATCH", "usage/2026-11-11_m_alice", "alice", { count: 0 }), false);
+  for (const path of ["users/alice/reports/annual", "users/alice/settings/calendar", "users/alice/settings/rectification", "calendarTokens/example", "aiAnswers/example"]) {
+    check(`客戶端不能直接讀取 ${path}`, await request("GET", path, "alice"), false);
+    check(`客戶端不能直接寫入 ${path}`, await request("PATCH", path, "alice", { payload: "{}" }), false);
+  }
   check("其他集合一律不能寫", await request("PATCH", "anything/doc", "alice", { a: "b" }), false);
   check("本人刪除自己的命盤", await request("DELETE", "users/alice/charts/abc123", "alice"), true);
   console.log(failed ? `\n${failed} 項不符` : "\n全部通過");

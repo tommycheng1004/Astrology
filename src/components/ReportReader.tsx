@@ -1,0 +1,114 @@
+"use client";
+
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { accountServerSnapshot, accountSnapshot, openAccountDialog, subscribeAccount } from "@/lib/account";
+import { AI_ENABLED } from "@/lib/site";
+import type { MonthReport, ReportRecord } from "@/lib/annualReport";
+import { memberFetch } from "@/lib/memberFetch";
+
+export function MonthFocus({ focus }: { focus: MonthReport | null }) {
+  if (!focus) return <p>這個月超出可推算的運限範圍。</p>;
+  return (
+    <dl className="space-y-2">
+      <div><dt className="font-bold">可多著力 · {focus.best.label}</dt><dd>{focus.best.insight}</dd></div>
+      <div><dt className="font-bold">需要留意 · {focus.watch.label}</dt><dd>{focus.watch.insight}</dd></div>
+    </dl>
+  );
+}
+
+export default function ReportReader() {
+  const account = useSyncExternalStore(subscribeAccount, accountSnapshot, accountServerSnapshot);
+  const id = useSearchParams().get("record");
+  const [loaded, setLoaded] = useState<{ uid: string; id: string | null; value?: ReportRecord; error?: string } | null>(null);
+  const uid = account.user?.uid;
+  const current = uid === loaded?.uid && id === loaded?.id ? loaded : null;
+  const record = current?.value;
+  const error = current?.error;
+
+  useEffect(() => {
+    if (!uid || !id) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    let delay = 1200;
+    async function refresh() {
+      try {
+        const res = await memberFetch(`/api/reports/${encodeURIComponent(id ?? "")}`, { signal: controller.signal });
+        if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "找不到報告。");
+        const value = await res.json() as ReportRecord;
+        if (controller.signal.aborted) return;
+        setLoaded({ uid: uid!, id, value });
+        if (value.status === "pending") {
+          timer = setTimeout(refresh, delay);
+          delay = Math.min(delay * 2, 6000);
+        }
+      } catch (reason) {
+        if (!controller.signal.aborted) setLoaded({ uid: uid!, id, error: (reason as Error).message });
+      }
+    }
+    void refresh();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [uid, id]);
+
+  const ready = record?.status === "ready" ? record : null;
+  const report = ready?.report;
+  const facts = report?.kind === "annual" ? report.facts : null;
+  const title = report?.kind === "annual" ? "2027 流年報告" : report?.kind === "monthly" ? `${report.date} 流月報告` : report?.kind === "deep" ? "深度解盤" : "會員命盤報告";
+  return (
+    <main className="report-print mx-auto w-full max-w-3xl space-y-6 px-4 py-8 text-sm leading-relaxed sm:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="font-serif text-2xl font-bold sm:text-3xl">{title}</h1>
+        {ready && <button type="button" onClick={() => window.print()} className="report-actions min-h-11 rounded-lg border border-line px-4 text-accent">列印／存成 PDF</button>}
+      </div>
+      {!uid && (!account.enabled ? <p>會員功能尚未設定。</p> : !account.ready ? <p role="status">正在確認登入狀態…</p> : (
+        <button type="button" onClick={openAccountDialog} className="min-h-11 rounded-lg bg-accent px-4 text-surface">登入查看報告</button>
+      ))}
+      {uid && !ready && <p role="status">{error ?? (!id ? "請從命盤結果開啟一份報告。" : record?.status === "failed" ? "報告整理失敗，可返回原命盤重新產生。" : "正在整理報告…完成後會在這裡顯示。")}</p>}
+      {ready && <p role="status" className="sr-only">報告已完成</p>}
+      {facts && (
+        <>
+          <p>{facts.summary}</p>
+          <section className="space-y-2">
+            <h2 className="font-serif text-xl font-bold">十項流年運勢</h2>
+            <dl className="grid grid-cols-2 gap-2">
+              {facts.aspects.map((item) => <div key={item.label}><dt className="font-bold">{item.label}</dt><dd>{item.level} · {item.score} 分</dd></div>)}
+            </dl>
+          </section>
+          <section className="space-y-2">
+            <h2 className="font-serif text-xl font-bold">犯太歲與流年四化</h2>
+            <p>{facts.taisui.length ? facts.taisui.map((item) => `${item}太歲`).join("、") : "依本站生肖規則，未遇到犯太歲的組合。"}</p>
+            <ul className="list-disc pl-5">{facts.mutagens.map((item) => <li key={item.change}>{item.star}化{item.change}入本命{item.palace}</li>)}</ul>
+          </section>
+          <section className="space-y-4">
+            <h2 className="font-serif text-xl font-bold">十二流月重點</h2>
+            {facts.months.map((item) => (
+              <article key={item.label} className="report-keep space-y-2 rounded-lg border border-line p-3">
+                <h3 className="font-bold">{item.label} · {item.range}</h3>
+                <MonthFocus focus={item.focus} />
+              </article>
+            ))}
+          </section>
+          <section className="space-y-2">
+            <h2 className="font-serif text-xl font-bold">全年擇日</h2>
+            <dl className="space-y-2">
+              {facts.days.map((item) => (
+                <div key={item.purpose} className="report-keep">
+                  <dt className="font-bold">{item.purpose}</dt><dd>{item.dates.join("、") || "沒有符合條件的日期"}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </>
+      )}
+      {report?.kind === "monthly" && <MonthFocus focus={report.facts} />}
+      {ready && AI_ENABLED && !ready.narrative && <p>這份報告顯示本站規則計算結果。可從命盤結果同意 AI 整理後重新開啟。</p>}
+      {ready?.narrative && <section className="space-y-2"><h2 className="font-serif text-xl font-bold">AI 解讀</h2><p className="whitespace-pre-wrap">{ready.narrative}</p></section>}
+      {ready && <p>命理內容供個人參考。涉及健康、投資或法律，請諮詢專業人士。</p>}
+      <Link href="/" className="report-actions inline-flex min-h-11 items-center text-accent underline">回首頁排盤</Link>
+    </main>
+  );
+}

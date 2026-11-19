@@ -32,7 +32,7 @@
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | 同上 |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | 同上 |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | 同上 |
-| `FIREBASE_CLIENT_EMAIL` | 服務帳戶，AI 每日題數用 |
+| `FIREBASE_CLIENT_EMAIL` | 服務帳戶，用於會員報告、行事曆、事件定盤、AI 快取與題數 |
 | `FIREBASE_PRIVATE_KEY` | 勾「Contains secret values」；整段貼上，含 `-----BEGIN` 與 `-----END` |
 
 ### 選填
@@ -42,6 +42,7 @@
 | `NEXT_PUBLIC_CONTACT_EMAIL` | 隱私權政策頁的聯絡信箱。有會員資料後**建議設定**，使用者才知道怎麼申請刪除帳號 |
 | `AI_DAILY_GUEST`、`AI_DAILY_MEMBER` | 每日題數，預設 2 與 10 |
 | `AI_MODEL` | AI 模型，預設見 `.env.example` |
+| `AI_DEEP_MODEL` | 深度解盤專用模型（選填） |
 
 **不要設定**：`NEXT_PUBLIC_FIREBASE_EMULATOR`、`FIREBASE_AUTH_EMULATOR_HOST`、`FIRESTORE_EMULATOR_HOST`、`GEMINI_BASE_URL`（這些只給本機測試用）。
 
@@ -64,5 +65,5 @@ Netlify 會掃描建置結果，看到 secret 的值出現在網頁裡就擋下�
 ## 4. 部署後
 
 1. 把 Netlify 網址（和之後的正式網域）加到 Firebase「Authentication → 設定 → 授權網域」，否則無法登入。
-2. 照 [firebase-setup.md](firebase-setup.md) 第 7 步檢查登入、驗證信、命盤同步、AI 題數。
+2. 照 [firebase-setup.md](firebase-setup.md) 第 7 步檢查登入、驗證信、命盤同步、AI 題數。再依序驗證會員報告、訂閱行事曆與事件定盤。
 3. 綁正式網域後：改 `NEXT_PUBLIC_SITE_URL`、在 Firebase 加授權網域、重新部署。

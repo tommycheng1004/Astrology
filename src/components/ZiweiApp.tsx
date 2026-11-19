@@ -18,7 +18,6 @@ import {
 } from "@/lib/savedCharts";
 import { accountServerSnapshot, accountSnapshot, openAccountDialog, subscribeAccount } from "@/lib/account";
 import { parseShareHash } from "@/lib/shareLink";
-import { AI_ENABLED } from "@/lib/site";
 import { EngineLoadError, MAX_YEAR, MIN_YEAR } from "@/lib/ziwei";
 
 /*
@@ -28,6 +27,7 @@ import { EngineLoadError, MAX_YEAR, MIN_YEAR } from "@/lib/ziwei";
 const loadEngine = () => import("@/lib/buildChart");
 const loadResult = () => import("@/components/ChartResult");
 const ChartResult = dynamic(loadResult);
+const TodayOverview = dynamic(() => import("@/components/TodayOverview"), { loading: () => <p role="status" className="py-4 text-sm text-ink-soft">正在載入今日運勢…</p> });
 const TimeChooser = dynamic(() => import("@/components/TimeChooser"));
 
 /** LINE 內建瀏覽器的 User-Agent 含「Line/版本」 */
@@ -42,13 +42,13 @@ function liunianParam() {
 
 type FormSeed = { key: string; initial: SavedBirth | BirthDraft; remembered: boolean };
 
-export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: ReactNode }) {
+export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNode; yearBanner?: ReactNode; outro?: ReactNode }) {
   const [chart, setChart] = useState<Chart | null>(null);
   const [choices, setChoices] = useState<{ saved: SavedBirth; list: TimeChoice[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** 排盤後把表單收起來，結果頁直接從命盤開始；按「修改生辰」再打開 */
-  const [formOpen, setFormOpen] = useState(true);
+  const [formOpen, setFormOpen] = useState<boolean | null>(null);
+  const [initialToday, setInitialToday] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const inLine = useSyncExternalStore(noSubscribe, isLineBrowser, () => false);
   const account = useSyncExternalStore(subscribeAccount, accountSnapshot, accountServerSnapshot);
@@ -60,7 +60,11 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
   const [seedOverride, setSeedOverride] = useState<FormSeed | null>(null);
   const seed: FormSeed = seedOverride ?? (charts[0] ? { key: `last-${charts[0].id}`, initial: charts[0].saved, remembered: true } : { key: "empty", initial: EMPTY_BIRTH, remembered: false });
 
-  async function run(saved: SavedBirth, variant: Chart["variant"] = "main", source: Chart["source"] = "form") {
+  const returning = charts.length > 0 && !liunian;
+  const showForm = formOpen ?? !returning;
+  const showHome = !chart && !choices;
+
+  async function run(saved: SavedBirth, variant: Chart["variant"] = "main", source: Chart["source"] = "form", today = false) {
     setLoading(true);
     setError(null);
     try {
@@ -70,14 +74,12 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
       if (saved.timeMode === "unknown") {
         setChoices({ saved, list: await engine.buildTimeChoices(saved) });
         setChart(null);
+        setFormOpen(false);
         return;
       }
       const next = await engine.buildChart(saved, variant, source);
-      if (source === "form") {
-        upsertChart(saved);
-        // 自己排的盤不沿用分享連結的網址
-        if (location.hash) history.replaceState(null, "", location.pathname + location.search);
-      }
+      if (source === "form" && location.hash) history.replaceState(null, "", location.pathname + location.search);
+      setInitialToday(today);
       setChoices(null);
       setChart(next);
       setFormOpen(false);
@@ -105,9 +107,14 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
     return () => window.removeEventListener("hashchange", openShared);
   }, []);
 
-  function openSaved(item: SavedChart) {
-    setSeedOverride({ key: `pick-${item.id}-${Date.now()}`, initial: item.saved, remembered: true });
-    run(item.saved);
+  function openSaved(item: SavedChart, today = false) {
+    void run(item.saved, "main", "form", today);
+  }
+
+  function newChart() {
+    setSeedOverride({ key: `new-${Date.now()}`, initial: EMPTY_BIRTH, remembered: false });
+    flushSync(() => setFormOpen(true));
+    scrollToForm();
   }
 
   function scrollToForm() {
@@ -115,20 +122,32 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
   }
 
   function editBirth() {
-    // 先讓表單出現在畫面上，才捲得過去
+    const saved = chart?.saved ?? choices?.saved;
+    if (saved) setSeedOverride({ key: `edit-${Date.now()}`, initial: saved, remembered: false });
     flushSync(() => setFormOpen(true));
     scrollToForm();
   }
 
-  const isSaved = !!chart && charts.some((c) => c.id === chartId(chart.saved));
+  const savedVersion = chart && charts.find((item) => item.id === chartId(chart.saved));
+  const isSaved = !!chart && savedVersion?.saved.input.name === chart.input.name;
 
   return (
     <>
+      {showHome && returning && (
+        <div className="mx-auto w-full max-w-[60rem] px-4 pt-5 sm:px-6 sm:pt-8">
+          <h1 className="sr-only">紫微斗數免費排盤</h1>
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+            <TodayOverview key={charts[0].id} item={charts[0]} loading={loading} onOpen={() => openSaved(charts[0], true)} />
+            <MyCharts charts={charts} loading={loading} onOpen={openSaved} onNew={newChart} />
+          </div>
+          {!showForm && error && <p role="alert" className="mt-2 text-sm text-ji">{error}</p>}
+        </div>
+      )}
       <section
-        className={`${chart && !formOpen ? "hidden" : "grid"} mx-auto w-full max-w-6xl items-center gap-7 px-4 pt-6 pb-12 sm:gap-10 sm:px-6 lg:grid-cols-[1fr_440px] lg:gap-16 lg:pt-16 lg:pb-20`}
+        className={`${showForm ? "grid" : "hidden"} mx-auto w-full max-w-[60rem] items-start gap-4 px-4 pt-5 pb-6 sm:gap-7 sm:px-6 sm:pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,29rem)] lg:gap-10`}
       >
-        <div>{intro}</div>
-        <div ref={formRef} className="scroll-mt-6 space-y-4">
+        {showHome && !returning && <div className="lg:pt-6">{intro}</div>}
+        <div ref={formRef} onFocusCapture={() => setFormOpen(true)} className="min-w-0 scroll-mt-6 space-y-3 lg:col-start-2">
           {inLine && (
             <p role="note" className="rounded-2xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm leading-relaxed text-ink-soft">
               你正在 LINE 裡瀏覽。存下的命盤只會留在 LINE 的瀏覽器，換到 Safari 或 Chrome 就看不到；想長期保存，請點右上角的選單，選「用預設瀏覽器開啟」。
@@ -139,7 +158,6 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
               排好命盤後，會直接帶你看 <strong>{liunian} 年</strong>的流年運勢。
             </p>
           )}
-          {charts.length > 0 && <MyCharts charts={charts} loading={loading} onOpen={openSaved} />}
           <div>
             <BirthForm
               key={seed.key}
@@ -151,10 +169,8 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
               allowUnknownTime
               note={
                 account.user
-                  ? "排盤在你的瀏覽器中計算；你已登入，排過的命盤會同步到你的帳號。"
-                  : AI_ENABLED
-                    ? "排盤在你的瀏覽器中計算，不會上傳；只有使用「問 AI」時，才會送出生辰（不含姓名）。"
-                    : "資料只在你的瀏覽器中計算與保存，不會上傳。"
+                  ? "生辰在瀏覽器中排盤。儲存後可在帳號的命盤清單查看。"
+                  : "生辰在你的瀏覽器中排盤。"
               }
             />
             {error && (
@@ -166,14 +182,22 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
         </div>
       </section>
 
+      {showHome && !!liunian && charts.length > 0 && (
+        <div className="mx-auto mb-4 w-full max-w-[60rem] px-4 sm:px-6">
+          <MyCharts charts={charts} loading={loading} onOpen={openSaved} onNew={newChart} />
+        </div>
+      )}
+      {showHome && yearBanner && <div className="mx-auto mb-8 w-full max-w-[60rem] px-4 sm:px-6">{yearBanner}</div>}
+
       {choices && !chart && (
         <TimeChooser
           choices={choices.list}
+          saved={choices.saved}
           loading={loading}
           onPick={(timeIndex) => run({ ...choices.saved, timeMode: "slot", input: { ...choices.saved.input, timeIndex } })}
           onCancel={() => {
+            editBirth();
             setChoices(null);
-            scrollToForm();
           }}
         />
       )}
@@ -188,7 +212,8 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
           onSwitchVariant={() => run(chart.saved, chart.variant === "main" ? "alt" : "main", chart.source)}
           onEditBirth={editBirth}
           onSave={() => upsertChart(chart.saved)}
-          initialYear={liunian ?? undefined}
+          initialYear={initialToday ? undefined : liunian ?? undefined}
+          initialToday={initialToday}
         />
       )}
 
@@ -198,12 +223,12 @@ export default function ZiweiApp({ intro, outro }: { intro: ReactNode; outro?: R
   );
 }
 
-/** 「我的命盤」：排過的命盤只存在這個瀏覽器，點一下就重新排出來 */
-function MyCharts({ charts, loading, onOpen }: { charts: SavedChart[]; loading: boolean; onOpen: (c: SavedChart) => void }) {
+/** 「我的命盤」：點已存的命盤即可重新排盤 */
+function MyCharts({ charts, loading, onOpen, onNew }: { charts: SavedChart[]; loading: boolean; onOpen: (c: SavedChart) => void; onNew: () => void }) {
   const [editing, setEditing] = useState(false);
   const account = useSyncExternalStore(subscribeAccount, accountSnapshot, accountServerSnapshot);
   return (
-    <section aria-labelledby="my-charts-title" className="rounded-2xl border border-line bg-surface/90 p-4 sm:px-5">
+    <section aria-labelledby="my-charts-title" className="min-w-0 rounded-2xl border border-line bg-surface p-4 sm:px-5">
       <div className="flex items-center justify-between gap-2">
         <h2 id="my-charts-title" className="font-serif text-base font-bold">
           我的命盤 <span className="text-sm font-normal text-muted">{charts.length}</span>
@@ -219,7 +244,7 @@ function MyCharts({ charts, loading, onOpen }: { charts: SavedChart[]; loading: 
               type="button"
               disabled={loading || editing}
               onClick={() => onOpen(c)}
-              className="flex min-h-11 flex-1 items-baseline gap-2 rounded-lg px-2 text-left transition hover:bg-surface-2 disabled:hover:bg-transparent"
+              className="flex min-h-11 min-w-0 flex-1 flex-wrap items-center gap-x-2 rounded-lg px-2 text-left transition hover:bg-surface-2 disabled:hover:bg-transparent"
             >
               <span className="font-medium text-ink">{c.saved.input.name || "未命名"}</span>
               <span className="text-sm text-muted">{chartCaption(c.saved)}</span>
@@ -237,6 +262,7 @@ function MyCharts({ charts, loading, onOpen }: { charts: SavedChart[]; loading: 
           </li>
         ))}
       </ul>
+      {!editing && <button type="button" onClick={onNew} disabled={loading} className="action-secondary mt-2">新增命盤</button>}
       {editing && (
         <button
           type="button"

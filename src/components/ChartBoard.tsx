@@ -19,13 +19,14 @@ import {
 type Props = {
   astrolabe: Astrolabe;
   input: BirthInput;
+  rulesText: string;
   selectedIndex: number;
   horoscope: IFunctionalHoroscope | null;
   lens: Lens;
   onSelect: (index: number) => void;
 };
 
-export default function ChartBoard({ astrolabe, input, selectedIndex, horoscope, lens, onSelect }: Props) {
+export default function ChartBoard({ astrolabe, input, rulesText, selectedIndex, horoscope, lens, onSelect }: Props) {
   const rel = surroundedIndexes(selectedIndex);
   const flowMutagens = lensMutagens(horoscope, lens);
 
@@ -37,24 +38,26 @@ export default function ChartBoard({ astrolabe, input, selectedIndex, horoscope,
   }
 
   return (
-    // 寬高比只是預設尺寸：列高用 1fr（最小為內容高度）、外框用 overflow-clip（不是捲動容器），
-    // 星曜特別多的宮位會把那一列與整張盤撐高，而不是被裁掉
-    <div data-chart-board className="relative grid aspect-[3/4] grid-cols-4 grid-rows-[repeat(4,1fr)] gap-px overflow-clip rounded-xl border border-line-strong bg-line-strong/70 sm:aspect-[5/4]">
-      {astrolabe.palaces.map((palace) => (
-        <PalaceCell
-          key={palace.index}
-          palace={palace}
-          relation={relationOf(palace.index)}
-          layers={horoscope ? LEVELS.map((level) => ({ level, name: horoscope[level].palaceNames[palace.index] })) : []}
-          lens={lens}
-          flowMutagens={flowMutagens}
-          onSelect={onSelect}
-        />
-      ))}
+    <figure className="min-w-0">
+      {/* 列高隨星曜內容撐開，避免裁切。 */}
+      <div data-chart-board className="relative grid aspect-[3/4] grid-cols-4 grid-rows-[repeat(4,1fr)] gap-px overflow-clip rounded-xl border border-line-strong bg-line-strong/70 sm:aspect-[5/4]">
+        {astrolabe.palaces.map((palace) => (
+          <PalaceCell
+            key={palace.index}
+            palace={palace}
+            relation={relationOf(palace.index)}
+            layers={horoscope ? LEVELS.map((level) => ({ level, name: horoscope[level].palaceNames[palace.index] })) : []}
+            lens={lens}
+            flowMutagens={flowMutagens}
+            onSelect={onSelect}
+          />
+        ))}
 
-      <CenterPanel astrolabe={astrolabe} input={input} />
-      <SurroundLines selectedIndex={selectedIndex} />
-    </div>
+        <CenterPanel astrolabe={astrolabe} input={input} />
+        <SurroundLines selectedIndex={selectedIndex} />
+      </div>
+      <figcaption className="mt-2 text-xs leading-relaxed text-ink-soft">{rulesText}</figcaption>
+    </figure>
   );
 }
 
@@ -241,8 +244,8 @@ function CenterPanel({ astrolabe, input }: { astrolabe: Astrolabe; input: BirthI
       style={{ gridRow: "2 / span 2", gridColumn: "2 / span 2" }}
       className="relative flex flex-col items-center justify-center gap-2 bg-surface px-2 py-3 text-center sm:gap-3 sm:px-6"
     >
-      <div>
-        <div className="font-serif text-base font-bold tracking-[0.15em] sm:text-2xl">
+      <div className="min-w-0 max-w-full">
+        <div className="max-w-full font-serif text-base font-bold tracking-[0.15em] [overflow-wrap:anywhere] sm:text-2xl">
           {input.name || "命盤"}
         </div>
         <div className="mt-0.5 text-[11px] text-ink-soft sm:text-sm">

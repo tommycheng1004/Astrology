@@ -158,3 +158,49 @@ export async function refundQuestion(key: string) {
   const date = key.slice(0, 10);
   await addUsage(key, -1, new Date(Date.parse(`${date}T00:00:00+08:00`) + 2 * 86400_000));
 }
+
+export async function requestMember(request: Request) {
+  const token = /^Bearer (\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
+  return token ? verifyIdToken(token) : null;
+}
+
+export function privateJson(data: unknown, status = 200) {
+  return Response.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
+}
+
+const documentName = (path: string[]) => `${documentsPath()}/${path.join("/")}`;
+const documentUrl = (path: string[]) => `${apiBase()}/${documentsPath()}/${path.map(encodeURIComponent).join("/")}`;
+
+/** 僅供伺服器使用。version 用於避免同時提交覆寫較新的結果。 */
+export async function readDocument<T>(path: string[]): Promise<{ data: T; version: string } | null> {
+  const res = await fetch(documentUrl(path), {
+    headers: { Authorization: `Bearer ${await accessToken()}` },
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Firestore read failed: ${res.status}`);
+  const doc = (await res.json()) as { fields?: { payload?: { stringValue: string } }; updateTime: string };
+  if (!doc.fields?.payload) return null;
+  return { data: JSON.parse(doc.fields.payload.stringValue) as T, version: doc.updateTime };
+}
+
+type DocumentWrite = { path: string[]; data?: unknown; version?: string | false };
+
+export async function writeDocuments(writes: DocumentWrite[]): Promise<boolean> {
+  const res = await fetch(`${apiBase()}/${documentsPath()}:commit`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      writes: writes.map(({ path, data, version }) => ({
+        ...(data === undefined
+          ? { delete: documentName(path) }
+          : { update: { name: documentName(path), fields: { payload: { stringValue: JSON.stringify(data) } } }, updateMask: { fieldPaths: ["payload"] } }),
+        ...(version === false ? { currentDocument: { exists: false } } : version ? { currentDocument: { updateTime: version } } : {}),
+      })),
+    }),
+  });
+  if (res.ok) return true;
+  const error = await res.json().catch(() => null) as { error?: { status?: string } } | null;
+  if (["ABORTED", "ALREADY_EXISTS", "FAILED_PRECONDITION", "NOT_FOUND"].includes(error?.error?.status ?? "")) return false;
+  throw new Error(`Firestore write failed: ${res.status}`);
+}

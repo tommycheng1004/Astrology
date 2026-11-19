@@ -178,7 +178,7 @@ function drawCenter(ctx: Ctx, astrolabe: Astrolabe, name: string, family: string
   });
 }
 
-export async function renderChartImage(astrolabe: Astrolabe, name: string): Promise<Blob> {
+export async function renderChartImage(astrolabe: Astrolabe, name: string, rulesText: string): Promise<Blob> {
   const family = fontFamily();
   // 確保襯線字型已下載，否則 canvas 會先用系統字畫
   await Promise.all([document.fonts.load(`500 24px ${family}`, "命盤紫微"), document.fonts.load(`700 30px ${family}`, "命盤紫微")]);
@@ -210,5 +210,67 @@ export async function renderChartImage(astrolabe: Astrolabe, name: string): Prom
   text(ctx, "紫微命盤", MARGIN, fy, `700 32px ${family}`, C.accent);
   text(ctx, `${location.host}・免費紫微斗數排盤`, WIDTH - MARGIN, fy + 6, `500 22px ${family}`, C.muted, "right");
 
+  text(ctx, rulesText, MARGIN, fy + 46, `500 20px ${family}`, C.inkSoft);
+
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("無法產生圖片"))), "image/png"));
+}
+
+/** 將結果頁的個性摘要排版成 4:5 PNG。 */
+export async function renderPersonalityImage(personality: { title: string; sentence: string; stars: string }): Promise<Blob> {
+  const width = 1080;
+  const height = 1350;
+  const inset = 84;
+  const family = fontFamily();
+  await Promise.all([
+    document.fonts.load(`500 46px ${family}`, personality.sentence),
+    document.fonts.load(`700 82px ${family}`, personality.title),
+  ]);
+  const art = new Image();
+  art.src = "/ziwei-sky.webp";
+  const loaded = await art.decode().then(() => true, () => false);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#251931";
+  ctx.fillRect(0, 0, width, height);
+  if (loaded) {
+    const scale = Math.max(width / art.naturalWidth, height / art.naturalHeight);
+    ctx.drawImage(art, (width - art.naturalWidth * scale) / 2, 0, art.naturalWidth * scale, art.naturalHeight * scale);
+  }
+  const shade = ctx.createLinearGradient(0, 0, width, height);
+  shade.addColorStop(0, "#24152f80");
+  shade.addColorStop(0.5, "#24152f85");
+  shade.addColorStop(1, "#1b1027eb");
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.strokeStyle = "#c5a6db99";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(44, 44, width - 88, height - 88);
+  text(ctx, "紫微命盤", inset, 100, `700 34px ${family}`, "#ead5f8");
+  text(ctx, personality.stars, inset, 435, `500 38px ${family}`, "#ead5f8");
+  text(ctx, personality.title, inset, 515, `700 82px ${family}`, "#fff6ff");
+  ctx.fillStyle = "#d3abec";
+  ctx.fillRect(inset, 653, 84, 3);
+  const paragraphFont = `500 46px ${family}`;
+  ctx.font = paragraphFont;
+  let row = "";
+  let y = 715;
+  for (const char of personality.sentence) {
+    if (ctx.measureText(row + char).width > width - inset * 2) {
+      text(ctx, row, inset, y, paragraphFont, "#f7ecff");
+      row = "";
+      y += 75;
+    }
+    row += char;
+  }
+  if (row) text(ctx, row, inset, y, paragraphFont, "#f7ecff");
+  text(ctx, location.host, inset, height - 150, `500 28px ${family}`, "#e5cfee");
+  text(ctx, "命盤個性卡", width - inset, height - 150, `500 28px ${family}`, "#e5cfee", "right");
+
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => {
+    if (blob) resolve(blob);
+    else reject(new Error("無法產生圖片"));
+  }, "image/png"));
 }

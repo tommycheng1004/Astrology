@@ -158,30 +158,37 @@ function flagsOf(purpose: Purpose, year: number, month: number, day: number, day
 
 const blocked = (d: DayPick) => d.flags.some((f) => f.blocks);
 
-/**
- * 依目的挑日子。partnerBranch：結婚時另一半的生年地支，沖對方的日子也不推薦。
- */
-export function pickDays(astrolabe: Astrolabe, purposeId: string, span: number, from = new Date(), partnerBranch?: string) {
+/** 同一張命盤的每日各面向分數，可重複用於不同擇日目的。 */
+export function dateScores(astrolabe: Astrolabe, span: number, from: Date) {
+  const scores = new Map<string, ReturnType<typeof analyzeLayer>>();
+  for (let i = 0; i < span; i++) {
+    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i);
+    const date = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    const h = horoscopeAt(astrolabe, date, 0, { date, hour: 11 });
+    if (h) scores.set(date, analyzeLayer(astrolabe, h, "daily", false, ALL_ASPECTS));
+  }
+  return scores;
+}
+
+/** partnerBranch 是結婚對象的生年地支，沖對方的日子也不推薦。 */
+export function pickDays(astrolabe: Astrolabe, purposeId: string, span: number, from = new Date(), partnerBranch?: string, scores = dateScores(astrolabe, span, from)) {
   const purpose = PURPOSES.find((p) => p.id === purposeId) ?? PURPOSES[0];
   const birthBranch = astrolabe.rawDates.chineseDate.yearly[1];
   const days: DayPick[] = [];
-  for (let i = 0; i < span; i++) {
-    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i);
-    const dateStr = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-    const h = horoscopeAt(astrolabe, dateStr, 0, { date: dateStr, hour: 11 });
-    if (!h) continue;
-    const all = analyzeLayer(astrolabe, h, "daily", false, ALL_ASPECTS);
+  for (const [dateStr, all] of scores) {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const d = new Date(year, month - 1, day);
     const results = purpose.keys.map((k) => all.find((r) => r.key === k)!);
     const others = all.filter((r) => !purpose.keys.includes(r.key as AspectKey));
     const lunar = solarStringToLunar(dateStr);
-    const gz = dayGanzhi(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    const gz = dayGanzhi(year, month, day);
     const score = average(results);
     days.push({
       date: dateStr,
       label: `${d.getFullYear() !== from.getFullYear() ? `${d.getFullYear()}/` : ""}${d.getMonth() + 1}/${d.getDate()}（${WEEKDAYS[d.getDay()]}）`,
       lunar: `${lunar.isLeap ? "閏" : ""}${LUNAR_MONTHS[lunar.lunarMonth - 1]}月${LUNAR_DAYS[lunar.lunarDay - 1]}`,
       ganzhi: `${gz.stem}${gz.branch}日`,
-      flags: flagsOf(purpose, d.getFullYear(), d.getMonth() + 1, d.getDate(), gz.branch, birthBranch, partnerBranch),
+      flags: flagsOf(purpose, year, month, day, gz.branch, birthBranch, partnerBranch),
       score,
       grade: gradeOf(score),
       reason: "",

@@ -1,10 +1,11 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { ApiError, FinishReason, GoogleGenAI, ThinkingLevel } from "@google/genai";
-import { AI_SYSTEM_PROMPT } from "@/lib/aiPrompt";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { ApiError, FinishReason, GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
+import { AI_PROMPT_VERSION, AI_SUGGESTIONS, AI_SYSTEM_PROMPT } from "@/lib/aiPrompt";
 import { buildChart } from "@/lib/buildChart";
-import { chartSummary } from "@/lib/chartSummary";
-import { authConfigured, DAILY_LIMIT, refundQuestion, takeQuestion, usageConfigured, verifyIdToken, type Quota } from "@/lib/server/firebase";
-import { parseShareHash } from "@/lib/shareLink";
+import { chartTextWithFacts } from "@/lib/chartText";
+import { checkStructuredAnswer, type VerifiedAnswer } from "@/lib/server/aiVerify";
+import { authConfigured, DAILY_LIMIT, readDocument, refundQuestion, takeQuestion, usageConfigured, verifyIdToken, writeDocuments, type Quota } from "@/lib/server/firebase";
+import { parseShareHash, shareHash } from "@/lib/shareLink";
 
 /**
  * AI 問答：POST { birth, variant, messages, sig } → 以換行分隔的 JSON 串流
@@ -119,12 +120,13 @@ export async function POST(request: Request) {
 
   const raw = await request.text();
   if (raw.length > MAX_BODY) return fail(413, "內容太長。");
-  let body: { birth?: unknown; variant?: unknown; messages?: unknown; sig?: unknown };
+  let body: { birth?: unknown; variant?: unknown; messages?: unknown; sig?: unknown; suggestion?: unknown };
   try {
     body = JSON.parse(raw);
   } catch {
     return fail(400, "格式錯誤。");
   }
+  if (!body || typeof body !== "object") return fail(400, "格式錯誤。");
   const saved = typeof body.birth === "string" ? parseShareHash(`#c=${body.birth}`) : null;
   const turns = parseTurns(body.messages);
   if (!saved) return fail(400, "生辰資料有誤。");
@@ -135,17 +137,59 @@ export async function POST(request: Request) {
   if (turns.length > 1 && !validSignature(body.sig, signHistory(birth, variant, turns.slice(0, -1))))
     return fail(400, "對話紀錄無法驗證，請按「重新開始」。");
 
-  let summary: string;
+  const suggestion = typeof body.suggestion === "string" && Object.hasOwn(AI_SUGGESTIONS, body.suggestion)
+    ? AI_SUGGESTIONS[body.suggestion as keyof typeof AI_SUGGESTIONS]
+    : null;
+  const cachePath = usageConfigured && suggestion === turns.at(-1)?.content
+    ? ["aiAnswers", createHmac("sha256", historySecret()).update(JSON.stringify([shareHash(saved), variant, body.suggestion, AI_PROMPT_VERSION, MODEL])).digest("hex")]
+    : null;
+
+  const responseHeaders = { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" };
+  function events(reply: VerifiedAnswer, quotaInfo?: object) {
+    return [
+      { t: reply.answer },
+      { done: true, stop: "end_turn", facts: reply.facts, filtered: reply.filtered, quota: quotaInfo,
+        sig: signHistory(birth, variant, [...turns!, { role: "assistant", content: reply.answer }]) },
+    ];
+  }
+  type CacheRecord = VerifiedAnswer | { job: string; startedAt: number };
+  let cacheVersion: string | false = false;
+  if (cachePath) {
+    try {
+      const cached = await readDocument<CacheRecord>(cachePath);
+      if (cached && "answer" in cached.data) {
+        console.info("[ask] suggestion cache hit");
+        return new Response(events(cached.data).map((event) => JSON.stringify(event) + "\n").join(""), { headers: responseHeaders });
+      }
+      if (cached && "job" in cached.data && Date.now() - cached.data.startedAt < 40_000)
+        return fail(409, "這個建議問題正在整理，請稍後再試。");
+      cacheVersion = cached?.version ?? false;
+    } catch {
+      return fail(503, "建議問題暫時無法使用，請稍後再試。");
+    }
+  }
+
+  let evidence: ReturnType<typeof chartTextWithFacts>;
   try {
-    const chart = await buildChart(saved, variant, "share");
-    summary = chartSummary(chart.astrolabe);
+    evidence = chartTextWithFacts(await buildChart(saved, variant, "share"));
   } catch {
     return fail(400, "無法排出命盤，請確認生辰資料。");
   }
 
+  let lease: string | null = null;
+  if (cachePath) {
+    try {
+      lease = randomUUID();
+      if (!await writeDocuments([{ path: cachePath, data: { job: lease, startedAt: Date.now() }, version: cacheVersion }]))
+        return fail(409, "這個建議問題正在整理，請稍後再試。");
+    } catch {
+      return fail(503, "建議問題暫時無法使用，請稍後再試。");
+    }
+  }
+
   // 每日題數：內容都檢查過才扣，格式錯誤的請求不算一題
   let quota: Quota | null = null;
-  if (usageConfigured) {
+  if (usageConfigured && !cachePath) {
     try {
       const taken = await takeQuestion(uid ? { uid } : { ip }, historySecret());
       quota = taken.quota;
@@ -182,66 +226,65 @@ export async function POST(request: Request) {
       async start(controller) {
         let answered = false;
         try {
-          let answer = "";
-          let finish: string | undefined;
-          let usage: { promptTokenCount?: number; cachedContentTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined;
-          // Gemini 偶爾會回空白的 MALFORMED_RESPONSE（SDK 的列舉裡還沒有這個值）；還沒輸出任何文字時自動重試一次
+          let reply: VerifiedAnswer | null = null;
+          let retry = "";
           for (let attempt = 0; attempt < 2; attempt++) {
-            finish = undefined;
-            const stream = await ai.models.generateContentStream({
+            console.info("[ask] generating answer", { suggestion: !!cachePath, attempt });
+            const result = await ai.models.generateContent({
               model: MODEL,
-              contents: turns.map((t) => ({
+              contents: (cachePath ? turns.slice(-1) : turns).map((t) => ({
                 role: t.role === "assistant" ? "model" : "user",
                 parts: [{ text: t.role === "user" ? wrapQuestion(t.content) : t.content }],
               })),
               config: {
-                // 共用指示在前、命盤資料在後：Gemini 會自動快取相同的開頭（implicit caching），同一段對話的追問較省
-                systemInstruction: `${AI_SYSTEM_PROMPT}\n\n命盤資料：\n${summary}`,
+                systemInstruction: `${AI_SYSTEM_PROMPT}\n\n命盤資料：\n${evidence.text}${retry}`,
                 maxOutputTokens: 3000,
-                // 一般問答不需要深度推理，思考程度低一點回答較快也較省（思考 token 以輸出價格計費）
                 thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-                abortSignal: abort.signal,
+                abortSignal: AbortSignal.any([abort.signal, AbortSignal.timeout(14_000)]),
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: Type.OBJECT,
+                  properties: { answer: { type: Type.STRING }, factIds: { type: Type.ARRAY, items: { type: Type.STRING } } },
+                  required: ["answer", "factIds"],
+                },
               },
             });
-            for await (const chunk of stream) {
-              const text = chunk.text;
-              if (text) {
-                answer += text;
-                send(controller, { t: text });
-              }
-              finish = chunk.candidates?.[0]?.finishReason ?? finish;
-              usage = chunk.usageMetadata ?? usage;
+            const finish = result.candidates?.[0]?.finishReason;
+            if (finish === FinishReason.SAFETY || finish === FinishReason.PROHIBITED_CONTENT) break;
+            const checked = checkStructuredAnswer(clean(result.text ?? ""), evidence);
+            checked.result.answer = clean(checked.result.answer);
+            if (checked.result.answer.length > MAX_ANSWER) checked.errors.push("回答過長");
+            if (!checked.errors.length) {
+              reply = checked.result;
+              break;
             }
-            if (answer || finish !== "MALFORMED_RESPONSE") break;
-            console.warn("[ask] MALFORMED_RESPONSE，重試一次");
+            retry = `\n\n請修正上一版回答：${checked.errors.join("；")}`;
+            if (attempt === 1 && checked.validCitation && checked.result.answer && checked.result.answer.length <= MAX_ANSWER) {
+              reply = checked.result;
+            }
           }
-          console.info(
-            `[ask] ${MODEL} in=${usage?.promptTokenCount ?? 0} cached=${usage?.cachedContentTokenCount ?? 0} out=${usage?.candidatesTokenCount ?? 0} thoughts=${usage?.thoughtsTokenCount ?? 0} finish=${finish}`,
-          );
-          const stop =
-            finish === FinishReason.MAX_TOKENS
-              ? "max_tokens"
-              : finish && finish !== FinishReason.STOP
-                ? "refusal" // SAFETY、PROHIBITED_CONTENT 等被擋下的情況
-                : "end_turn";
-          if (stop === "max_tokens") {
-            // 截斷說明也由伺服器加上，前端照收，簽章才對得起來
-            const note = "……（回答太長，已截斷）";
-            answer += note;
-            send(controller, { t: note });
+          if (!reply) {
+            send(controller, { done: true, stop: "refusal" });
+            return;
           }
-          const reply = clean(answer);
-          answered = stop !== "refusal" && !!reply;
-          send(controller, {
-            done: true,
-            stop,
-            quota: answered ? quotaInfo : undefined,
-            // 被擋下或沒有內容的回答不會留在對話裡，不需要簽章
-            sig: stop !== "refusal" && reply ? signHistory(birth, variant, [...turns, { role: "assistant", content: reply }]) : undefined,
-          });
+          if (cachePath) {
+            const current = await readDocument<CacheRecord>(cachePath);
+            const stored = current && "job" in current.data && current.data.job === lease
+              ? await writeDocuments([{ path: cachePath, data: reply, version: current.version }])
+              : false;
+            if (!stored) {
+              const winner = await readDocument<CacheRecord>(cachePath);
+              if (!winner || !("answer" in winner.data)) throw new Error("Missing suggestion cache");
+              reply = winner.data;
+            }
+          }
+          if (!abort.signal.aborted) {
+            for (const event of events(reply, quotaInfo)) send(controller, event);
+            answered = true;
+          }
         } catch (error) {
           if (!abort.signal.aborted) {
-            console.error("[ask]", error);
+            console.error("[ask]", (error as Error).name);
             const status = error instanceof ApiError ? error.status : 0;
             // 免費方案的每日額度（錯誤內容含 PerDay）在美西時間午夜重置
             const daily = status === 429 && /PerDay/i.test(String((error as Error).message));
@@ -259,10 +302,16 @@ export async function POST(request: Request) {
         } finally {
           // 沒有得到回答（出錯、被擋下、中途取消）就把這一題退回
           if (!answered && quota) await refundQuestion(quota.key).catch((e) => console.error("[ask] 退回題數失敗", e));
+          if (cachePath && lease && !answered) {
+            await readDocument<CacheRecord>(cachePath).then(async (current) => {
+              if (current && "job" in current.data && current.data.job === lease)
+                await writeDocuments([{ path: cachePath, version: current.version }]);
+            }).catch(() => console.error("[ask] cache lock release failed"));
+          }
           controller.close();
         }
       },
     }),
-    { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } },
+    { headers: responseHeaders },
   );
 }

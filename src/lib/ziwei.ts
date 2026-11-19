@@ -111,6 +111,9 @@ const CHART_CONFIG = {
   dayDivide: "forward",
 } as const;
 
+export const chartRulesText = (trueSolarApplied: boolean) =>
+  `通行版四化・正月初一換年・晚子時算隔日・真太陽時：${trueSolarApplied ? "開" : "關"}`;
+
 /**
  * 宮位索引（0 = 寅宮，依地支順行）對應到 4×4 命盤格線的位置。
  *

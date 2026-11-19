@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/palaces",
     ...PALACES.map((p) => `/palaces/${p.slug}`),
     ...liunianYears().map((y) => `/liunian/${y}`),
+    ...liunianYears().map((y) => `/taisui/${y}`),
     "/privacy",
   ];
   return paths.map((path) => ({ url: absoluteUrl(path), lastModified }));
