@@ -7,7 +7,7 @@ import { Breadcrumbs, ChartCta } from "@/components/SiteChrome";
 import { mutagenInPalace, PALACES, palaceBySlug, starInPalace, surroundingOf } from "@/content/palaces";
 import { MUTAGENS } from "@/content/sihua";
 import { STARS } from "@/content/stars";
-import { absoluteUrl, breadcrumbLd, CONTENT_UPDATED, pageMetadata, PUBLISHER } from "@/lib/site";
+import { articleLd, breadcrumbLd, pageMetadata } from "@/lib/site";
 
 export const dynamicParams = false;
 
@@ -19,7 +19,10 @@ function describe(slug: string) {
   const palace = palaceBySlug(slug);
   if (!palace) return null;
   const title = `${palace.title}${palace.alias ? `（${palace.alias}）` : ""}看什麼？十四主星在${palace.title}`;
-  return { palace, title, description: palace.summary };
+  // 摘要只有一句，補上本頁涵蓋的內容，讓搜尋結果的說明完整（約 80–90 字）
+  const { opposite, trines } = surroundingOf(palace);
+  const description = `${palace.summary}本頁整理十四主星在${palace.title}的解讀、三方四正（對宮${opposite.title}、三合${trines.map((t) => t.title).join("與")}）、空宮與四化。`;
+  return { palace, title, description };
 }
 
 export async function generateMetadata({ params }: PageProps<"/palaces/[slug]">): Promise<Metadata> {
@@ -53,18 +56,7 @@ export default async function PalacePage({ params }: PageProps<"/palaces/[slug]"
         data={{
           "@graph": [
             breadcrumbLd(crumbs),
-            {
-              "@type": "Article",
-              headline: title,
-              description,
-              inLanguage: "zh-Hant-TW",
-              url: absoluteUrl(path),
-              mainEntityOfPage: absoluteUrl(path),
-              dateModified: CONTENT_UPDATED,
-              author: PUBLISHER,
-              publisher: PUBLISHER,
-              about: { "@type": "Thing", name: `${palace.title}（紫微斗數十二宮）` },
-            },
+            articleLd({ headline: title, description, path, section: "palaces", about: `${palace.title}（紫微斗數十二宮）` }),
           ],
         }}
       />
@@ -129,7 +121,7 @@ export default async function PalacePage({ params }: PageProps<"/palaces/[slug]"
             {STARS.map((s) => (
               <div key={s.slug} className="max-w-[40em]">
                 <h3 className="font-serif text-lg font-bold">
-                  <Link href={`/stars/${s.slug}`} className="inline-flex min-h-11 items-center text-star-major underline-offset-4 hover:underline">
+                  <Link href={`/stars/${s.slug}`} className="inline-flex min-h-11 min-w-11 items-center justify-center text-star-major underline-offset-4 hover:underline">
                     {s.name}
                   </Link>
                   在{palace.title}

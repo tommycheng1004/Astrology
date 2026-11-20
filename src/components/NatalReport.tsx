@@ -65,7 +65,7 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
             <p className="text-sm text-muted">
               {persona.borrowedFrom ? `命宮無主星，借${persona.borrowedFrom}的${persona.stars}` : `${persona.stars}坐命`}
             </p>
-            <h4 className="mt-1 font-serif text-2xl font-bold text-accent">{persona.title}</h4>
+            <h3 className="mt-1 font-serif text-2xl font-bold text-accent">{persona.title}</h3>
             <p className="mt-3 max-w-[40em] text-base leading-[1.8] text-ink-soft">{persona.text}</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <TraitList title="優點" tone="good" items={persona.strengths} />
@@ -170,9 +170,9 @@ function Section({ id, kicker, title, children }: { id: string; kicker: string; 
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-24">
       <p className="text-sm text-gold">{kicker}</p>
-      <h3 id={`${id}-title`} className="mt-1 mb-4 font-serif text-2xl font-bold sm:text-3xl">
+      <h2 id={`${id}-title`} className="mt-1 mb-4 font-serif text-2xl font-bold sm:text-3xl">
         {title}
-      </h3>
+      </h2>
       {children}
     </section>
   );
@@ -181,7 +181,7 @@ function Section({ id, kicker, title, children }: { id: string; kicker: string; 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <article className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-      <h4 className="mb-3 text-sm font-medium text-muted">{title}</h4>
+      <h3 className="mb-3 text-sm font-medium text-muted">{title}</h3>
       {children}
     </article>
   );

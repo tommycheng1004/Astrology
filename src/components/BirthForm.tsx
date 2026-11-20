@@ -446,7 +446,7 @@ function Segmented<T extends string>({
       role="radiogroup"
       aria-invalid={invalid || undefined}
       aria-describedby={describedBy}
-      className={`grid h-11 rounded-lg border bg-paper/60 p-1 ${invalid ? "border-ji" : "border-line"}`}
+      className={`grid h-[3.125rem] rounded-lg border bg-paper/60 p-0.5 ${invalid ? "border-ji" : "border-line"}`}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((o) => (

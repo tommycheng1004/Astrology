@@ -63,7 +63,7 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
 
   useLayoutEffect(() => {
     const result = resultRef.current;
-    result?.querySelector("h2")?.focus({ preventScroll: true });
+    result?.querySelector<HTMLElement>(".chart-result-heading")?.focus({ preventScroll: true });
     result?.scrollIntoView({ block: "start" });
   }, []);
 
@@ -138,9 +138,10 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
   return (
     <section ref={resultRef} aria-label="排盤結果" className="mx-auto w-full max-w-[60rem] scroll-mt-2 px-3 pt-3 pb-12 sm:px-6 md:pt-5 md:pb-16">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <h2 tabIndex={-1} className="chart-result-heading min-w-0 break-words font-serif text-xl font-bold tracking-wide sm:text-2xl">
+        {/* 排盤後首頁的 H1 會收起，結果標題就是這個畫面的 H1 */}
+        <h1 tabIndex={-1} className="chart-result-heading min-w-0 break-words font-serif text-xl font-bold tracking-wide sm:text-2xl">
           {chart.source === "share" ? "分享的命盤" : chart.input.name ? `${chart.input.name}的命盤` : "你的命盤"}
-        </h2>
+        </h1>
         <div className="flex max-w-full flex-wrap items-center gap-x-1">
           {isSaved ? (
             <span role="status" className="px-2 text-xs font-medium text-ink-soft">已存到我的命盤</span>

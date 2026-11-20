@@ -24,7 +24,13 @@ export function GET() {
     "## 流年運勢",
     ...liunianYears().map((y) => {
       const info = liunianInfo(y);
-      return `- [${y} ${info.ganzhi}年流年運勢](${absoluteUrl(`/liunian/${y}`)})：犯太歲生肖（${info.taisui.map((t) => `屬${t.zodiac}${t.label}`).join("、")}）、流年四化、春節與立春日期`;
+      return `- [${y} ${info.ganzhi}年流年運勢](${absoluteUrl(`/liunian/${y}`)})：犯太歲生肖（${info.taisui.map((t) => `屬${t.zodiac}${t.label}`).join("；")}）、流年四化、春節與立春日期`;
+    }),
+    "",
+    "## 犯太歲查詢",
+    ...liunianYears().map((y) => {
+      const info = liunianInfo(y);
+      return `- [${y} 犯太歲生肖查詢](${absoluteUrl(`/taisui/${y}`)})：${info.ganzhi}年十二生肖值、沖、刑、害、破太歲一覽與出生年次對照（${info.taisui.map((t) => `屬${t.zodiac}${t.label}`).join("；")}）`;
     }),
     "",
     "## 十四主星",

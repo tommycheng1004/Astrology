@@ -14,12 +14,25 @@ export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || nu
 /** AI 問答是否開啟（前端分頁與 /api/ask 共用同一個開關） */
 export const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED === "1";
 
-/** 內容頁最後一次實質修改的日期，改寫解讀內容時請一併更新 */
-export const CONTENT_UPDATED = "2026-10-31";
+/**
+ * 各類內容頁的首次發布與最後一次實質修改日期（結構化資料、sitemap 與頁面上的「最後更新」共用）。
+ * 改寫某類頁面的解讀內容時，請更新該類的 modified；只改版面或 metadata 不用更新。
+ */
+export const CONTENT_DATES = {
+  home: { published: "2026-10-29", modified: "2026-11-19" },
+  method: { published: "2026-10-30", modified: "2026-11-19" },
+  stars: { published: "2026-10-30", modified: "2026-11-01" },
+  palaces: { published: "2026-10-30", modified: "2026-11-01" },
+  liunian: { published: "2026-11-11", modified: "2026-11-19" },
+  taisui: { published: "2026-11-19", modified: "2026-11-20" },
+  privacy: { published: "2026-11-11", modified: "2026-11-19" },
+} as const;
+
+export type ContentSection = keyof typeof CONTENT_DATES;
 
 export const absoluteUrl = (path: string) => `${SITE_URL}${path === "/" ? "" : path}`;
 
-export const PUBLISHER = { "@type": "Organization", name: SITE_NAME, url: SITE_URL } as const;
+export const PUBLISHER = { "@type": "Organization", name: SITE_NAME, url: SITE_URL, logo: absoluteUrl("/apple-icon.png") } as const;
 
 /** 麵包屑的 JSON-LD */
 export function breadcrumbLd(items: { name: string; path: string }[]) {
@@ -34,7 +47,7 @@ export function breadcrumbLd(items: { name: string; path: string }[]) {
   };
 }
 
-const OG_IMAGE = {
+export const OG_IMAGE = {
   url: "/opengraph-image.png",
   width: 1200,
   height: 630,
@@ -65,5 +78,39 @@ export function pageMetadata({
     alternates: { canonical: path },
     openGraph: { type, url: path, title, description, siteName: SITE_NAME, locale: "zh_TW", images: [OG_IMAGE] },
     twitter: { card: "summary_large_image", title, description, images: [OG_IMAGE.url] },
+  };
+}
+
+/**
+ * 內容頁的 Article 結構化資料。image 與 datePublished 是 Google 建議欄位；
+ * 日期取自 CONTENT_DATES，避免每頁各寫一份而忘了更新。
+ */
+export function articleLd({
+  headline,
+  description,
+  path,
+  section,
+  about,
+}: {
+  headline: string;
+  description: string;
+  path: string;
+  section: ContentSection;
+  about?: string;
+}) {
+  const dates = CONTENT_DATES[section];
+  return {
+    "@type": "Article",
+    headline,
+    description,
+    inLanguage: "zh-Hant-TW",
+    url: absoluteUrl(path),
+    mainEntityOfPage: absoluteUrl(path),
+    image: { "@type": "ImageObject", url: absoluteUrl(OG_IMAGE.url), width: OG_IMAGE.width, height: OG_IMAGE.height },
+    datePublished: dates.published,
+    dateModified: dates.modified,
+    author: PUBLISHER,
+    publisher: PUBLISHER,
+    ...(about ? { about: { "@type": "Thing", name: about } } : {}),
   };
 }

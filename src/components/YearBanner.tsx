@@ -18,21 +18,33 @@ export default function YearBanner({ buildYear, years }: { buildYear: number; ye
   );
   const info = liunianInfo(year);
   return (
-    <Link
-      href={`/liunian/${year}`}
-      className="group mt-7 flex min-h-11 items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 transition hover:border-gold"
-    >
-      <span>
-        <span className="block font-serif text-base font-bold text-ink">
-          {year} {info.ganzhi}年運勢
+    <div className="mt-7 flex flex-wrap items-stretch gap-2">
+      <Link
+        href={`/liunian/${year}`}
+        className="group flex min-h-11 flex-1 basis-64 items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 transition hover:border-gold"
+      >
+        <span>
+          <span className="block font-serif text-base font-bold text-ink">
+            {year} {info.ganzhi}年運勢
+          </span>
+          <span className="block text-sm text-ink-soft">流年四化・重要日期</span>
         </span>
-        <span className="block text-sm text-ink-soft">
-          犯太歲生肖：{info.taisui.map((t) => `屬${t.zodiac}`).join("、")}・流年四化
+        <span aria-hidden className="text-gold transition group-hover:translate-x-0.5">
+          →
         </span>
-      </span>
-      <span aria-hidden className="text-gold transition group-hover:translate-x-0.5">
-        →
-      </span>
-    </Link>
+      </Link>
+      <Link
+        href={`/taisui/${year}`}
+        className="group flex min-h-11 flex-1 basis-64 items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 transition hover:border-gold"
+      >
+        <span>
+          <span className="block font-serif text-base font-bold text-ink">{year} 犯太歲生肖</span>
+          <span className="block text-sm text-ink-soft">{info.taisui.map((t) => `屬${t.zodiac}`).join("、")}</span>
+        </span>
+        <span aria-hidden className="text-gold transition group-hover:translate-x-0.5">
+          →
+        </span>
+      </Link>
+    </div>
   );
 }

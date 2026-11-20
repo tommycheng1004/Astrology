@@ -29,9 +29,9 @@ export default function ChartHighlights({ chart, onToday }: { chart: Chart; onTo
     <section aria-labelledby="personality-heading" className="ziwei-sky overflow-hidden rounded-2xl px-5 py-5 text-[#f9f2ff] motion-safe:animate-[summary-enter_220ms_ease-out] sm:px-8 sm:py-7">
       <div className="relative max-w-[36rem]">
         <p className="text-sm font-medium text-[#e5d2f3]">{personality?.stars || "你的命盤個性"}</p>
-        <h3 id="personality-heading" className="mt-1 font-serif text-[clamp(1.65rem,5vw,2.75rem)] leading-tight font-bold tracking-wide">
+        <h2 id="personality-heading" className="mt-1 font-serif text-[clamp(1.65rem,5vw,2.75rem)] leading-tight font-bold tracking-wide">
           {personality?.title || "從命宮認識自己"}
-        </h3>
+        </h2>
         {personality && <p className="mt-2 max-w-[30em] text-[15px] leading-relaxed text-[#f2e9fa] sm:text-base">{personality.sentence}</p>}
       </div>
       <div className="relative mt-5 grid gap-x-8 gap-y-3 border-t border-[#cdb7e4]/30 pt-4 sm:grid-cols-2">

@@ -7,7 +7,7 @@ import { TAIWAN_CLOCK_SHIFTS } from "@/content/dst";
 import { MUTAGENS, SIHUA, STEMS } from "@/content/sihua";
 import { starByName } from "@/content/stars";
 import { BOUNDARY_MINUTES, longitudeCorrection, PLACES } from "@/lib/birthtime";
-import { absoluteUrl, breadcrumbLd, CONTENT_UPDATED, pageMetadata, PUBLISHER } from "@/lib/site";
+import { articleLd, breadcrumbLd, CONTENT_DATES, pageMetadata } from "@/lib/site";
 
 const TITLE = "紫微斗數排盤方法與準確度說明";
 const DESCRIPTION =
@@ -57,17 +57,7 @@ export default function MethodPage() {
         data={{
           "@graph": [
             breadcrumbLd(CRUMBS),
-            {
-              "@type": "Article",
-              headline: TITLE,
-              description: DESCRIPTION,
-              inLanguage: "zh-Hant-TW",
-              url: absoluteUrl(PATH),
-              mainEntityOfPage: absoluteUrl(PATH),
-              dateModified: CONTENT_UPDATED,
-              author: PUBLISHER,
-              publisher: PUBLISHER,
-            },
+            articleLd({ headline: TITLE, description: DESCRIPTION, path: PATH, section: "method" }),
           ],
         }}
       />
@@ -80,7 +70,7 @@ export default function MethodPage() {
             <p className="mt-4 text-[17px] leading-relaxed text-ink">
               本站採用台灣最通行的紫微斗數排法，並自動處理夏令時間、日治時期東京時間、晚子時與閏月這些最容易排錯的細節。以下逐項說明規則、各派差異與我們的驗證方式。
             </p>
-            <p className="mt-2 text-sm text-muted">最後更新：{CONTENT_UPDATED}</p>
+            <p className="mt-2 text-sm text-muted">最後更新：{CONTENT_DATES.method.modified}</p>
           </header>
 
           <nav aria-label="本頁目錄" className="mt-8 rounded-xl border border-line bg-surface p-5 lg:hidden">

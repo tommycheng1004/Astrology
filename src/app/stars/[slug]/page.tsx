@@ -7,7 +7,7 @@ import { PALACES, starInPalace } from "@/content/palaces";
 import { MUTAGEN_MEANING, mutagensOfStar } from "@/content/sihua";
 import { brightnessOf, combosOf, STARS, starBySlug } from "@/content/stars";
 import { PERSONAS } from "@/lib/personality";
-import { absoluteUrl, breadcrumbLd, CONTENT_UPDATED, pageMetadata, PUBLISHER } from "@/lib/site";
+import { articleLd, breadcrumbLd, pageMetadata } from "@/lib/site";
 
 export const dynamicParams = false;
 
@@ -65,18 +65,7 @@ export default async function StarPage({ params }: PageProps<"/stars/[slug]">) {
         data={{
           "@graph": [
             breadcrumbLd(crumbs),
-            {
-              "@type": "Article",
-              headline: title,
-              description,
-              inLanguage: "zh-Hant-TW",
-              url: absoluteUrl(path),
-              mainEntityOfPage: absoluteUrl(path),
-              dateModified: CONTENT_UPDATED,
-              author: PUBLISHER,
-              publisher: PUBLISHER,
-              about: { "@type": "Thing", name: `${star.name}星（紫微斗數主星）` },
-            },
+            articleLd({ headline: title, description, path, section: "stars", about: `${star.name}星（紫微斗數主星）` }),
           ],
         }}
       />
@@ -143,7 +132,7 @@ export default async function StarPage({ params }: PageProps<"/stars/[slug]">) {
               <div key={p.slug} className="max-w-[40em]">
                 <h3 className="font-serif text-lg font-bold">
                   {star.name}在
-                  <Link href={`/palaces/${p.slug}`} className="inline-flex min-h-11 items-center text-accent underline-offset-4 hover:underline">
+                  <Link href={`/palaces/${p.slug}`} className="inline-flex min-h-11 min-w-11 items-center justify-center text-accent underline-offset-4 hover:underline">
                     {p.title}
                   </Link>
                 </h3>

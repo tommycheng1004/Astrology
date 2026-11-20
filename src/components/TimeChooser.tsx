@@ -37,9 +37,9 @@ export default function TimeChooser({
     >
       <div className="flex flex-wrap items-end justify-between gap-3 px-1">
         <div>
-          <h2 id="time-chooser-title" className="font-serif text-2xl font-bold tracking-wide sm:text-3xl">
+          <h1 id="time-chooser-title" className="font-serif text-2xl font-bold tracking-wide sm:text-3xl">
             哪個時辰最像你？
-          </h2>
+          </h1>
           <p className="mt-2 max-w-[40em] text-[15px] leading-relaxed text-ink-soft">
             時辰決定命宮在哪裡，也就決定了命宮主星。讀讀看下面的個性描述，挑一個最像自己的；拿不定主意時，可以請熟悉你的人一起看。之後確認了出生時間，再回來重新排盤。
           </p>

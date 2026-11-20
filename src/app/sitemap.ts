@@ -2,20 +2,19 @@ import type { MetadataRoute } from "next";
 import { liunianYears } from "@/content/liunian";
 import { PALACES } from "@/content/palaces";
 import { STARS } from "@/content/stars";
-import { absoluteUrl, CONTENT_UPDATED } from "@/lib/site";
+import { absoluteUrl, CONTENT_DATES, type ContentSection } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date(CONTENT_UPDATED);
-  const paths = [
-    "/",
-    "/method",
-    "/stars",
-    ...STARS.map((s) => `/stars/${s.slug}`),
-    "/palaces",
-    ...PALACES.map((p) => `/palaces/${p.slug}`),
-    ...liunianYears().map((y) => `/liunian/${y}`),
-    ...liunianYears().map((y) => `/taisui/${y}`),
-    "/privacy",
+  const pages: [string, ContentSection][] = [
+    ["/", "home"],
+    ["/method", "method"],
+    ["/stars", "stars"],
+    ...STARS.map((s): [string, ContentSection] => [`/stars/${s.slug}`, "stars"]),
+    ["/palaces", "palaces"],
+    ...PALACES.map((p): [string, ContentSection] => [`/palaces/${p.slug}`, "palaces"]),
+    ...liunianYears().map((y): [string, ContentSection] => [`/liunian/${y}`, "liunian"]),
+    ...liunianYears().map((y): [string, ContentSection] => [`/taisui/${y}`, "taisui"]),
+    ["/privacy", "privacy"],
   ];
-  return paths.map((path) => ({ url: absoluteUrl(path), lastModified }));
+  return pages.map(([path, section]) => ({ url: absoluteUrl(path), lastModified: new Date(CONTENT_DATES[section].modified) }));
 }

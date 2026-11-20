@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import JsonLd from "@/components/JsonLd";
 import { Breadcrumbs } from "@/components/SiteChrome";
 import { liunianInfo, liunianYears } from "@/content/liunian";
-import { absoluteUrl, breadcrumbLd, pageMetadata, PUBLISHER } from "@/lib/site";
+import { articleLd, breadcrumbLd, pageMetadata } from "@/lib/site";
 
 export const dynamicParams = false;
 
@@ -72,16 +72,7 @@ export default async function LiunianPage({ params }: PageProps<"/liunian/[year]
         data={{
           "@graph": [
             breadcrumbLd(crumbs),
-            {
-              "@type": "Article",
-              headline: title,
-              description,
-              inLanguage: "zh-Hant-TW",
-              url: absoluteUrl(path),
-              mainEntityOfPage: absoluteUrl(path),
-              author: PUBLISHER,
-              publisher: PUBLISHER,
-            },
+            articleLd({ headline: title, description, path, section: "liunian", about: `${year} ${info.ganzhi}年流年運勢` }),
             {
               "@type": "FAQPage",
               mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),

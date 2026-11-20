@@ -32,6 +32,19 @@ export function taisuiOf(birthBranch: string, yearBranch: string): Taisui[] {
   return kinds;
 }
 
+export const TAISUI_KINDS: Taisui[] = ["值", "沖", "刑", "害", "破"];
+
+const pairsText = (list: string[]) => list.map((p) => `${p[0]}${p[1]}`).join("、");
+
+/** 各種太歲關係的地支規則（由上方的對照表組出，說明頁與判斷共用同一份資料） */
+export const TAISUI_RULE: Record<Taisui, string> = {
+  值: "出生年的地支與流年地支相同，也就是俗稱的本命年",
+  沖: "出生年的地支與流年地支相差六位、正好相對，例如子午、丑未、寅申相沖",
+  刑: `地支相刑：子卯相刑；${XING_GROUPS.join("、")}三刑；${[...SELF_XING].join("、")}遇到同一地支為自刑`,
+  害: `地支六害：${pairsText(HAI)}`,
+  破: `地支六破：${pairsText(PO)}`,
+};
+
 const TEXT: Record<Taisui, string> = {
   值: "本命年值太歲，生活容易有變動，凡事求穩",
   沖: "沖太歲，容易有搬遷、換工作或人事衝突，重大決定多想一想",
@@ -39,6 +52,9 @@ const TEXT: Record<Taisui, string> = {
   害: "害太歲，容易遇到小人或人際摩擦，交友要謹慎",
   破: "破太歲，容易破財或計畫生變，理財保守為宜",
 };
+
+/** 單一種太歲關係的民俗說法 */
+export const TAISUI_EFFECT = TEXT;
 
 export function taisuiText(kinds: Taisui[]) {
   return kinds.map((k) => TEXT[k]).join("；") + "。";

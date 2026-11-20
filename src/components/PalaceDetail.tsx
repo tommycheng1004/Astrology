@@ -53,10 +53,10 @@ export default function PalaceDetail({ astrolabe, selectedIndex, horoscope, lens
             {palace.heavenlyStem}
             {palace.earthlyBranch}宮
           </p>
-          <h3 className="mt-1 font-serif text-2xl font-bold text-accent">
+          <h2 className="mt-1 font-serif text-2xl font-bold text-accent">
             {palaceTitle(palace.name)}
             {palace.name === "僕役" && <span className="ml-2 align-middle text-sm font-medium text-muted">古稱僕役宮</span>}
-          </h3>
+          </h2>
         </div>
         <div className="flex flex-wrap justify-end gap-1.5 pt-1">
           {palace.isBodyPalace && <Badge className="bg-gold text-surface">身宮</Badge>}

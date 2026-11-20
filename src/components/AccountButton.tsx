@@ -3,6 +3,7 @@
 import DeepReportNotice from "@/components/DeepReportNotice";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import {
   ACCOUNT_CLOSE_EVENT,
   ACCOUNT_OPEN_EVENT,
@@ -35,6 +36,8 @@ export default function AccountButton() {
   const inApp = useSyncExternalStore(noSubscribe, isInAppBrowser, () => false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [engineReady, setEngineReady] = useState(false);
+  // 視窗內容只在打開時才渲染：關著時不出現在網頁 HTML，搜尋引擎與 AI 擷取的大綱才不會先讀到「登入會員」
+  const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("signin");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +61,8 @@ export default function AccountButton() {
     setError(null);
     setNotice(null);
     setMode("signin");
+    // 先同步渲染出內容，showModal 後才找得到標題來放焦點
+    flushSync(() => setOpen(true));
     dialogRef.current?.showModal();
     // 焦點放在標題：螢幕閱讀器先唸出視窗名稱，也不會一打開就在關閉鈕上出現焦點框
     dialogRef.current?.querySelector<HTMLElement>("#account-title")?.focus();
@@ -109,143 +114,146 @@ export default function AccountButton() {
       <dialog
         ref={dialogRef}
         aria-labelledby="account-title"
+        onClose={() => setOpen(false)}
         onClick={(e) => {
           // 點背景關閉
           if (e.target === e.currentTarget) e.currentTarget.close();
         }}
         className="m-auto max-h-[92dvh] w-[min(100%-2rem,26rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/45"
       >
-        <div className="relative p-6">
-          <button
-            type="button"
-            onClick={() => dialogRef.current?.close()}
-            aria-label="關閉"
-            className="absolute top-2 right-2 grid size-11 place-items-center rounded-full text-ink-soft hover:bg-surface-2"
-          >
-            <svg aria-hidden viewBox="0 0 16 16" className="size-4">
-              <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
-          </button>
+        {open && (
+          <div className="relative p-6">
+            <button
+              type="button"
+              onClick={() => dialogRef.current?.close()}
+              aria-label="關閉"
+              className="absolute top-2 right-2 grid size-11 place-items-center rounded-full text-ink-soft hover:bg-surface-2"
+            >
+              <svg aria-hidden viewBox="0 0 16 16" className="size-4">
+                <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              </svg>
+            </button>
 
-          {user ? (
-            <SignedIn
-              key={user.uid}
-              user={user}
-              syncText={
-                account.sync === "syncing"
-                  ? "正在同步「我的命盤」…"
-                  : account.sync === "error"
-                    ? "命盤同步失敗，請重新整理頁面再試。"
-                    : `「我的命盤」已同步到你的帳號（${account.syncedCount} 張），換裝置登入也看得到。`
-              }
-              busy={busy}
-              message={
-                error ? (
+            {user ? (
+              <SignedIn
+                key={user.uid}
+                user={user}
+                syncText={
+                  account.sync === "syncing"
+                    ? "正在同步「我的命盤」…"
+                    : account.sync === "error"
+                      ? "命盤同步失敗，請重新整理頁面再試。"
+                      : `「我的命盤」已同步到你的帳號（${account.syncedCount} 張），換裝置登入也看得到。`
+                }
+                busy={busy}
+                message={
+                  error ? (
+                    <p role="alert" className="mt-3 text-sm text-ji">
+                      {error}
+                    </p>
+                  ) : notice ? (
+                    <p role="status" className="mt-3 rounded-lg bg-lu/10 px-3.5 py-2.5 text-sm text-lu">
+                      {notice}
+                    </p>
+                  ) : null
+                }
+                onResend={() => run(resendVerification, `已重新寄出驗證信到 ${user.email}。`)}
+                onCheck={() =>
+                  run(async () => ((await refreshVerification()) ? null : "還沒有完成驗證，請先點驗證信裡的連結。"), "Email 已完成驗證。")
+                }
+                onSignOut={async () => {
+                  if (await run(async () => (await signOutAccount(), null))) dialogRef.current?.close();
+                }}
+              />
+            ) : (
+              <>
+                <h2 id="account-title" tabIndex={-1} className="pr-10 font-serif text-xl font-bold focus:outline-none">
+                  {mode === "signup" ? "註冊會員" : mode === "reset" ? "重設密碼" : "登入會員"}
+                </h2>
+                {mode !== "reset" && (
+                  <ul className="mt-3 space-y-1.5 text-[15px] leading-relaxed text-ink-soft">
+                    <li>・「我的命盤」同步到帳號，換手機、換瀏覽器都看得到</li>
+                    {AI_ENABLED && <li>・問 AI 每天可以問更多題</li>}
+                  </ul>
+                )}
+
+                {mode !== "reset" &&
+                  (inApp ? (
+                    <p className="mt-5 rounded-lg border border-gold/40 bg-gold/10 px-3.5 py-3 text-sm leading-relaxed text-ink-soft">
+                      App 內建的瀏覽器（例如 LINE）無法使用 Google 登入，可以改用下方的 Email
+                      {mode === "signup" ? "註冊" : "登入"}；或點右上角的選單，選「用預設瀏覽器開啟」。
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => run(signInWithGoogle)}
+                      disabled={!engineReady || busy}
+                      className="mt-5 flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-line-strong bg-surface text-[15px] font-medium text-ink transition hover:border-accent disabled:opacity-60"
+                    >
+                      <GoogleMark />
+                      {engineReady ? "用 Google 帳號登入" : "載入中…"}
+                    </button>
+                  ))}
+
+                {mode !== "reset" && (
+                  <p className="my-4 flex items-center gap-3 text-sm text-muted">
+                    <span aria-hidden className="h-px flex-1 bg-line" />或用 Email
+                    <span aria-hidden className="h-px flex-1 bg-line" />
+                  </p>
+                )}
+
+                <EmailForm
+                  key={mode}
+                  mode={mode}
+                  disabled={!engineReady || busy}
+                  onSubmit={(name, email, password) =>
+                    mode === "signup"
+                      ? run(() => signUpWithEmail(name, email, password))
+                      : mode === "signin"
+                        ? run(() => signInWithEmail(email, password))
+                        : run(() => sendPasswordReset(email), `如果 ${email} 有註冊過，重設密碼的信已經寄出，請到信箱查看（也看看垃圾郵件）。`)
+                  }
+                />
+
+                {error && (
                   <p role="alert" className="mt-3 text-sm text-ji">
                     {error}
                   </p>
-                ) : notice ? (
+                )}
+                {notice && (
                   <p role="status" className="mt-3 rounded-lg bg-lu/10 px-3.5 py-2.5 text-sm text-lu">
                     {notice}
                   </p>
-                ) : null
-              }
-              onResend={() => run(resendVerification, `已重新寄出驗證信到 ${user.email}。`)}
-              onCheck={() =>
-                run(async () => ((await refreshVerification()) ? null : "還沒有完成驗證，請先點驗證信裡的連結。"), "Email 已完成驗證。")
-              }
-              onSignOut={async () => {
-                if (await run(async () => (await signOutAccount(), null))) dialogRef.current?.close();
-              }}
-            />
-          ) : (
-            <>
-              <h2 id="account-title" tabIndex={-1} className="pr-10 font-serif text-xl font-bold focus:outline-none">
-                {mode === "signup" ? "註冊會員" : mode === "reset" ? "重設密碼" : "登入會員"}
-              </h2>
-              {mode !== "reset" && (
-                <ul className="mt-3 space-y-1.5 text-[15px] leading-relaxed text-ink-soft">
-                  <li>・「我的命盤」同步到帳號，換手機、換瀏覽器都看得到</li>
-                  {AI_ENABLED && <li>・問 AI 每天可以問更多題</li>}
-                </ul>
-              )}
+                )}
 
-              {mode !== "reset" &&
-                (inApp ? (
-                  <p className="mt-5 rounded-lg border border-gold/40 bg-gold/10 px-3.5 py-3 text-sm leading-relaxed text-ink-soft">
-                    App 內建的瀏覽器（例如 LINE）無法使用 Google 登入，可以改用下方的 Email
-                    {mode === "signup" ? "註冊" : "登入"}；或點右上角的選單，選「用預設瀏覽器開啟」。
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => run(signInWithGoogle)}
-                    disabled={!engineReady || busy}
-                    className="mt-5 flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-line-strong bg-surface text-[15px] font-medium text-ink transition hover:border-accent disabled:opacity-60"
-                  >
-                    <GoogleMark />
-                    {engineReady ? "用 Google 帳號登入" : "載入中…"}
-                  </button>
-                ))}
-
-              {mode !== "reset" && (
-                <p className="my-4 flex items-center gap-3 text-sm text-muted">
-                  <span aria-hidden className="h-px flex-1 bg-line" />或用 Email
-                  <span aria-hidden className="h-px flex-1 bg-line" />
-                </p>
-              )}
-
-              <EmailForm
-                key={mode}
-                mode={mode}
-                disabled={!engineReady || busy}
-                onSubmit={(name, email, password) =>
-                  mode === "signup"
-                    ? run(() => signUpWithEmail(name, email, password))
-                    : mode === "signin"
-                      ? run(() => signInWithEmail(email, password))
-                      : run(() => sendPasswordReset(email), `如果 ${email} 有註冊過，重設密碼的信已經寄出，請到信箱查看（也看看垃圾郵件）。`)
-                }
-              />
-
-              {error && (
-                <p role="alert" className="mt-3 text-sm text-ji">
-                  {error}
-                </p>
-              )}
-              {notice && (
-                <p role="status" className="mt-3 rounded-lg bg-lu/10 px-3.5 py-2.5 text-sm text-lu">
-                  {notice}
-                </p>
-              )}
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 text-sm">
-                {mode === "signin" && (
-                  <>
-                    <TextButton onClick={() => switchMode("reset")}>忘記密碼？</TextButton>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 text-sm">
+                  {mode === "signin" && (
+                    <>
+                      <TextButton onClick={() => switchMode("reset")}>忘記密碼？</TextButton>
+                      <span className="text-ink-soft">
+                        還沒有帳號？<TextButton onClick={() => switchMode("signup")}>註冊</TextButton>
+                      </span>
+                    </>
+                  )}
+                  {mode === "signup" && (
                     <span className="text-ink-soft">
-                      還沒有帳號？<TextButton onClick={() => switchMode("signup")}>註冊</TextButton>
+                      已經有帳號了？<TextButton onClick={() => switchMode("signin")}>登入</TextButton>
                     </span>
-                  </>
-                )}
-                {mode === "signup" && (
-                  <span className="text-ink-soft">
-                    已經有帳號了？<TextButton onClick={() => switchMode("signin")}>登入</TextButton>
-                  </span>
-                )}
-                {mode === "reset" && <TextButton onClick={() => switchMode("signin")}>← 回到登入</TextButton>}
-              </div>
+                  )}
+                  {mode === "reset" && <TextButton onClick={() => switchMode("signin")}>← 回到登入</TextButton>}
+                </div>
 
-              <p className="mt-3 text-xs leading-relaxed text-muted">
-                {mode === "signup" ? "註冊即表示你同意本站依" : "登入只會取得你的名稱、Email 與大頭貼，詳見"}
-                <Link href="/privacy" onClick={() => dialogRef.current?.close()} className="mx-0.5 text-accent underline underline-offset-4">
-                  隱私權政策
-                </Link>
-                {mode === "signup" ? "處理你的資料。" : "。"}
-              </p>
-            </>
-          )}
-        </div>
+                <p className="mt-3 text-xs leading-relaxed text-muted">
+                  {mode === "signup" ? "註冊即表示你同意本站依" : "登入只會取得你的名稱、Email 與大頭貼，詳見"}
+                  <Link href="/privacy" onClick={() => dialogRef.current?.close()} className="mx-0.5 text-accent underline underline-offset-4">
+                    隱私權政策
+                  </Link>
+                  {mode === "signup" ? "處理你的資料。" : "。"}
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </dialog>
     </>
   );

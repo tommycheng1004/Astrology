@@ -193,9 +193,9 @@ export default function AiChat({ chart }: { chart: Chart }) {
   if (!consent) {
     return (
       <section aria-labelledby="ai-title" className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-        <h3 id="ai-title" className="font-serif text-2xl font-bold">
+        <h2 id="ai-title" className="font-serif text-2xl font-bold">
           問 AI 命理師
-        </h3>
+        </h2>
         <p className="mt-2 max-w-[40em] text-[15px] leading-relaxed text-ink-soft">
           AI 會根據你的命盤回答問題，例如工作方向、今年運勢、感情與財運。
         </p>
@@ -244,9 +244,9 @@ export default function AiChat({ chart }: { chart: Chart }) {
             <div className="flex items-center gap-3">
               <Avatar />
               <div>
-                <h3 id="ai-title" className="font-serif text-lg font-bold leading-tight">
+                <h2 id="ai-title" className="font-serif text-lg font-bold leading-tight">
                   AI 命理老師
-                </h3>
+                </h2>
                 <p className="text-xs text-muted">看過你的命盤，有問題直接問</p>
               </div>
             </div>

@@ -49,13 +49,13 @@ export default function Synastry({
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-        <h3 className="font-serif text-2xl font-bold">合盤配對</h3>
+        <h2 className="font-serif text-2xl font-bold">合盤配對</h2>
         <p className="mt-1 max-w-[40em] text-[15px] text-ink-soft">
           輸入對方的生辰，看兩張命盤之間的四化互動、生肖與五行，了解彼此帶給對方什麼。
         </p>
         <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-ink-soft">你們的關係</legend>
-          <div className="grid h-12 max-w-md grid-cols-3 rounded-lg border border-line bg-paper/60 p-1">
+          <div className="grid h-[3.125rem] max-w-md grid-cols-3 rounded-lg border border-line bg-paper/60 p-0.5">
             {RELATIONS.map((r) => (
               <label
                 key={r.id}
@@ -111,7 +111,7 @@ export default function Synastry({
             onSubmit={handleSubmit}
             title="對方的生辰"
             submitLabel="開始合盤"
-            headingLevel="h4"
+            headingLevel="h3"
             canCompare={false}
           />
           {error && (
@@ -141,7 +141,7 @@ export default function Synastry({
             </div>
 
             <section className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-              <h4 className="font-serif text-lg font-bold">命盤呼應</h4>
+              <h3 className="font-serif text-lg font-bold">命盤呼應</h3>
               <ul className="mt-3 space-y-3 text-[15px] leading-relaxed text-ink-soft">
                 {result.echoes.map((t) => (
                   <li key={t}>{t}</li>
@@ -175,7 +175,7 @@ export default function Synastry({
 function CrossingCard({ title, receiver, items }: { title: string; receiver: string; items: Crossing[] }) {
   return (
     <section className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-      <h4 className="font-serif text-lg font-bold">{title}</h4>
+      <h3 className="font-serif text-lg font-bold">{title}</h3>
       <ul className="mt-3 space-y-3">
         {items.map((c) => (
           <li key={c.mutagen} className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">

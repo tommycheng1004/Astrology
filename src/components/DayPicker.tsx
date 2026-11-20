@@ -57,9 +57,9 @@ export default function DayPicker({ astrolabe, onSelectPalace, savedCharts = [],
   return (
     <div className="space-y-5">
       <section aria-labelledby="pick-title" className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-        <h3 id="pick-title" className="font-serif text-2xl font-bold">
+        <h2 id="pick-title" className="font-serif text-2xl font-bold">
           紫微擇日
-        </h3>
+        </h2>
         <p className="mt-1 max-w-[40em] text-[15px] text-ink-soft">
           依你的命盤與每天的流日，挑出最適合做這件事的日子，並附上當天最好的時辰；農民曆的沖煞與歲破、月破也一併避開。
         </p>
@@ -139,11 +139,11 @@ export default function DayPicker({ astrolabe, onSelectPalace, savedCharts = [],
 
         <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-ink-soft">從今天起找多久？</legend>
-          <div className="grid h-11 max-w-sm grid-cols-3 rounded-lg border border-line bg-paper/60 p-1">
+          <div className="grid h-[3.125rem] max-w-sm grid-cols-3 rounded-lg border border-line bg-paper/60 p-0.5">
             {SPANS.map((d) => (
               <label
                 key={d}
-                className="flex cursor-pointer items-center justify-center rounded-md text-[15px] text-ink-soft transition has-[:checked]:bg-surface has-[:checked]:font-bold has-[:checked]:text-accent has-[:checked]:shadow-sm"
+                className="flex cursor-pointer items-center justify-center rounded-md text-[15px] text-ink-soft transition has-[:checked]:bg-surface has-[:checked]:font-bold has-[:checked]:text-accent has-[:checked]:shadow-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent"
               >
                 <input type="radio" name="span" value={d} checked={span === d} onChange={() => setSpan(d)} className="sr-only" />
                 {d} 天
@@ -211,7 +211,7 @@ function DayListBody({
 }) {
   return (
     <section>
-      <h4 className="mb-3 font-serif text-xl font-bold">{title}</h4>
+      <h3 className="mb-3 font-serif text-xl font-bold">{title}</h3>
       <ul className="space-y-2">
         {days.map((d, i) => {
           const expanded = open === d.date;

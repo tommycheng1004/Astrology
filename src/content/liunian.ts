@@ -59,7 +59,7 @@ const MUTAGEN_EFFECT: Record<Mutagen, string> = {
 };
 
 /** 某年出生、屬這個生肖的民國年次（民國 30–115 年），例如屬羊：32、44、56… */
-function rocBirthYears(branchIndex: number, max: number) {
+export function rocBirthYears(branchIndex: number, max: number) {
   const list: number[] = [];
   for (let y = 1941; y <= max; y++) if ((((y - 4) % 12) + 12) % 12 === branchIndex) list.push(y - 1911);
   return list;

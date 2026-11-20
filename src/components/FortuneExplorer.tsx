@@ -346,9 +346,9 @@ export default function FortuneExplorer({ astrolabe, input, rulesText, now, init
                 <p className="text-sm text-muted">
                   {scaleMeta.name}・{head.sub}
                 </p>
-                <h3 id="period-title" className="mt-1 font-serif text-2xl font-bold sm:text-3xl">
+                <h2 id="period-title" className="mt-1 font-serif text-2xl font-bold sm:text-3xl">
                   {head.title}
-                </h3>
+                </h2>
                 {head.solar && <p className="mt-1.5 text-[15px] text-ink-soft tabular-nums">{head.solar}</p>}
               </div>
               <span className={`rounded-full px-3 py-1 text-base font-bold ${GRADE_BADGE[overall.grade]}`}>

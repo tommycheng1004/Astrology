@@ -21,7 +21,7 @@ export function SiteHeader() {
       >
         跳到主要內容
       </a>
-      <Link href="/" className="flex min-h-11 shrink-0 items-center gap-2.5">
+      <Link href="/" className="flex min-h-11 min-w-11 shrink-0 items-center gap-2.5">
         <span
           aria-hidden
           className="grid size-9 place-items-center rounded-md bg-accent font-serif text-[13px] leading-[1.05] font-bold text-surface shadow-sm"
@@ -40,7 +40,7 @@ export function SiteHeader() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="flex min-h-11 items-center rounded-lg px-1.5 text-[15px] whitespace-nowrap text-ink-soft transition hover:bg-surface-2 hover:text-accent min-[360px]:px-2 sm:px-3"
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-lg px-1.5 text-[15px] whitespace-nowrap text-ink-soft transition hover:bg-surface-2 hover:text-accent min-[360px]:px-2 sm:px-3"
                 >
                   <span className="sm:hidden">{item.label}</span>
                   <span className="hidden sm:inline">{item.long}</span>
@@ -94,7 +94,7 @@ export function Breadcrumbs({ items }: { items: { name: string; path: string }[]
                 {item.name}
               </span>
             ) : (
-              <Link href={item.path} className="inline-flex min-h-11 items-center hover:text-accent">
+              <Link href={item.path} className="inline-flex min-h-11 min-w-11 items-center justify-center hover:text-accent">
                 {item.name}
               </Link>
             )}
