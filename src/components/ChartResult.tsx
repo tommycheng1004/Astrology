@@ -56,7 +56,6 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
   const [chartFirst, setChartFirst] = useState(() => {
     try { return localStorage.getItem("ziwei:chart-first") === "1"; } catch { return false; }
   });
-  const [detailsSeen, setDetailsSeen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(() => chart.astrolabe.palaces.find((p) => p.name === "命宮")?.index ?? 0);
   const [sheetOpen, setSheetOpen] = useState(false);
   const resultRef = useRef<HTMLElement>(null);
@@ -144,6 +143,7 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
           {chart.source === "share" ? "分享的命盤" : chart.input.name ? `${chart.input.name}的命盤` : "你的命盤"}
         </h1>
         <div className="flex max-w-full flex-wrap items-center gap-x-1">
+          <button type="button" className="action-text" onClick={onEditBirth}>修改生辰</button>
           {isSaved ? (
             <span role="status" className="px-2 text-xs font-medium text-ink-soft">{chart.variant === "alt" ? "已儲存原始生辰" : "已存到我的命盤"}</span>
           ) : (
@@ -168,7 +168,7 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
         <ChartHighlights chart={chart} onToday={showToday} />
         {!chartFirst && board}
         <details className="border-y border-line px-1 text-sm">
-          <summary className="min-h-11 cursor-pointer py-3 font-medium text-ink-soft">生辰與顯示偏好</summary>
+          <summary className="min-h-11 cursor-pointer py-3 font-medium text-ink-soft">生辰資料與顯示偏好</summary>
           <div className="pb-3">
             <p className="text-ink-soft">{birthLine(chart)}</p>
             {chart.variant === "main" && chart.resolved.notes.length > 0 && (
@@ -183,15 +183,10 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
             </div>
           </div>
         </details>
-        <details
-          className="rounded-xl border border-line-strong px-3 sm:px-5"
-          onToggle={(event) => { if (event.currentTarget.open) setDetailsSeen(true); }}
-        >
-          <summary className="min-h-11 cursor-pointer py-3 font-serif text-lg font-bold">
-            完整命盤解讀 <span className="ml-1 font-sans text-xs font-normal text-ink-soft">格局、五運與十二宮</span>
-          </summary>
-          {detailsSeen && <div className="pb-5"><NatalReport astrolabe={chart.astrolabe} natal={chart.natal} onSelectPalace={showPalace} onOpenFortune={() => switchView("fortune")} /></div>}
-        </details>
+        <div id="natal-report" className="scroll-mt-24 border-t border-line pt-8">
+          <p className="mb-4 text-sm font-bold tracking-wide text-gold">完整命盤解讀・格局、五運與十二宮</p>
+          <NatalReport astrolabe={chart.astrolabe} natal={chart.natal} onSelectPalace={showPalace} onOpenFortune={() => switchView("fortune")} />
+        </div>
         <ChartReports chart={chart} />
       </div>
 

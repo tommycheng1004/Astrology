@@ -1,16 +1,32 @@
 import Link from "next/link";
 import AccountButton from "@/components/AccountButton";
+import HeaderNav, { type NavGroup, type NavItem } from "@/components/HeaderNav";
+import { featuredYear } from "@/content/liunian";
 import { FIREBASE_ENABLED } from "@/lib/firebaseConfig";
 import { AI_ENABLED, SITE_NAME } from "@/lib/site";
 
 /** 頁尾說明生辰什麼時候會送出 */
 const SENDS = [FIREBASE_ENABLED && "登入會員同步命盤", AI_ENABLED && "使用「問 AI」"].filter(Boolean).join("或");
 
-const NAV = [
-  { href: "/stars", label: "主星", long: "十四主星" },
-  { href: "/palaces", label: "十二宮", long: "十二宮" },
-  { href: "/method", label: "說明", long: "排盤說明" },
-];
+/** 工具（頁首直接列出）與學紫微（收在下拉選單）。流年、犯太歲指向建置時推薦的年份（農曆十月起推明年） */
+function navGroups() {
+  const year = featuredYear();
+  const tools: NavItem[] = [
+    { href: "/", label: "免費排盤", note: "命盤、運勢、擇日、合盤" },
+    { href: `/liunian/${year}`, label: `${year} 流年`, note: `${year} 年整體運勢與四化` },
+    { href: `/taisui/${year}`, label: "犯太歲", note: `${year} 年哪些生肖犯太歲` },
+    ...(FIREBASE_ENABLED ? [{ href: "/account", label: "會員中心", note: "我的命盤、報告、提醒、事件定盤" }] : []),
+  ];
+  const learn: NavGroup = {
+    title: "學紫微",
+    items: [
+      { href: "/stars", label: "十四主星", note: "每顆主星的個性與意義" },
+      { href: "/palaces", label: "十二宮", note: "每個宮位看什麼" },
+      { href: "/method", label: "排盤說明", note: "排盤規則與準確度" },
+    ],
+  };
+  return { tools, learn };
+}
 
 export function SiteHeader() {
   return (
@@ -33,22 +49,8 @@ export function SiteHeader() {
           {SITE_NAME}
         </span>
       </Link>
-      <div className="flex items-center">
-        <nav aria-label="主選單">
-          <ul className="flex items-center">
-            {NAV.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="flex min-h-11 min-w-11 items-center justify-center rounded-lg px-1.5 text-[15px] whitespace-nowrap text-ink-soft transition hover:bg-surface-2 hover:text-accent min-[360px]:px-2 sm:px-3"
-                >
-                  <span className="sm:hidden">{item.label}</span>
-                  <span className="hidden sm:inline">{item.long}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+      <div className="flex items-center gap-1">
+        <HeaderNav {...navGroups()} />
         <AccountButton />
       </div>
     </header>
@@ -66,16 +68,24 @@ export function SiteFooter() {
             排盤引擎：iztro（MIT License）・排盤在你的瀏覽器中計算，{SENDS ? `${SENDS}時才會送出生辰` : "生辰資料不會上傳"}。
           </p>
         </div>
-        <nav aria-label="網站導覽">
-          <ul className="grid grid-cols-2 gap-x-6 sm:grid-cols-1">
-            {[{ href: "/", long: "免費排盤" }, ...NAV, { href: "/privacy", long: "隱私權政策" }].map((item) => (
-              <li key={item.href}>
-                <Link href={item.href} className="flex min-h-11 items-center text-ink-soft hover:text-accent">
-                  {item.long}
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <nav aria-label="網站導覽" className="grid grid-cols-2 gap-x-8 gap-y-4 sm:flex sm:gap-12">
+          {(() => {
+            const { tools, learn } = navGroups();
+            return [{ title: "工具", items: tools }, { title: learn.title, items: [...learn.items, { href: "/privacy", label: "隱私權政策" }] }].map((group) => (
+              <div key={group.title}>
+                <p className="text-xs font-bold text-muted">{group.title}</p>
+                <ul className="mt-1">
+                  {group.items.map((item) => (
+                    <li key={item.href}>
+                      <Link href={item.href} className="flex min-h-11 items-center text-ink-soft hover:text-accent">
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ));
+          })()}
         </nav>
       </div>
     </footer>

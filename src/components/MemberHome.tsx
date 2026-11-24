@@ -28,8 +28,39 @@ export default function MemberHome() {
         ? <MemberTools key={account.user.uid} />
         : !account.ready
           ? <p role="status" className="mt-3 text-ink-soft">正在確認登入狀態…</p>
-          : <button type="button" className="action-primary mt-4" onClick={openAccountDialog}>登入會員</button>}
+          : <SignedOut />}
     </>
+  );
+}
+
+const MEMBER_FEATURES = [
+  { title: "我的命盤雲端同步", body: "換手機、換電腦登入，存過的命盤都在。" },
+  { title: "流年、流月報告", body: "整理一整年與每個月的重點和提醒。" },
+  ...(AI_ENABLED ? [{ title: "深度解盤與問 AI", body: "AI 整理整張命盤；會員每天可問的題數比訪客多。" }] : []),
+  { title: "流月提醒", body: "訂閱到手機行事曆，每個月自動提醒。" },
+  { title: "事件定盤", body: "不確定出生時辰？用結婚、換工作等人生大事推算。" },
+];
+
+function SignedOut() {
+  return (
+    <div className="mt-5 rounded-2xl border border-line bg-surface p-5 sm:p-6">
+      <p className="text-ink-soft">登入後可以使用：</p>
+      <ul className="mt-3 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+        {MEMBER_FEATURES.map((f) => (
+          <li key={f.title} className="flex gap-3">
+            <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-gold" />
+            <div>
+              <h2 className="font-serif text-lg font-bold">{f.title}</h2>
+              <p className="mt-0.5 text-sm text-ink-soft">{f.body}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <button type="button" className="action-primary px-6" onClick={openAccountDialog}>登入或免費註冊</button>
+        <span className="text-sm text-muted">可用 Google 帳號或 Email</span>
+      </div>
+    </div>
   );
 }
 

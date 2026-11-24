@@ -99,16 +99,19 @@ export default function AccountButton() {
         onClick={openDialog}
         aria-haspopup="dialog"
         aria-label={user ? `會員：${user.name || user.email}` : "登入或註冊會員"}
-        className="grid size-11 shrink-0 place-items-center rounded-full text-ink-soft transition hover:bg-surface-2 hover:text-accent"
+        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full pr-3 pl-1.5 text-[15px] transition hover:bg-surface-2 hover:text-accent ${
+          user ? "text-ink-soft" : "border border-line-strong pl-2.5 font-medium text-ink"
+        }`}
       >
         {user ? (
           <Avatar user={user} size="size-8" />
         ) : (
-          <svg aria-hidden viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.6">
+          <svg aria-hidden viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7">
             <circle cx="12" cy="8.5" r="3.75" />
             <path d="M4.75 19.5c1.2-3.4 4-5 7.25-5s6.05 1.6 7.25 5" strokeLinecap="round" />
           </svg>
         )}
+        <span aria-hidden>{user ? "會員" : "登入"}</span>
       </button>
 
       <dialog

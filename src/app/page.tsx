@@ -127,12 +127,44 @@ export default function Home() {
             <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-soft sm:mt-4 sm:text-base">
               輸入生辰，看自己的個性、今年重點與今日運勢。
             </p>
+            <FeatureList />
           </>
         }
         yearBanner={<YearBanner buildYear={BUILD_YEAR} years={liunianYears()} />}
         outro={<HomeGuide />}
       />
     </main>
+  );
+}
+
+/** 排盤後有哪些功能：讓第一次來的人在排盤前就知道擇日、合盤、問 AI 這些分頁存在 */
+const FEATURES = [
+  { title: "命盤解讀", body: "個性、格局、事業財運感情" },
+  { title: "運勢", body: "十年大運到每天的流日" },
+  { title: "擇日", body: "結婚、搬家、開業挑好日子" },
+  { title: "合盤", body: "伴侶、家人、同事配對" },
+  ...(AI_ENABLED ? [{ title: "問 AI", body: "像問命理師一樣提問" }] : []),
+  ...(FIREBASE_ENABLED ? [{ title: "會員報告", body: "流年、流月報告與提醒" }] : []),
+];
+
+function FeatureList() {
+  return (
+    <div className="mt-4 sm:mt-6">
+      <p className="text-sm font-bold text-gold">排盤後可以使用</p>
+      {/* 只是說明，不是按鈕：不加外框，避免讓人以為可以點 */}
+      <p className="mt-1 text-sm leading-relaxed text-ink-soft sm:hidden">{FEATURES.map((f) => f.title).join("・")}</p>
+      <ul className="mt-3 hidden gap-x-6 gap-y-3 sm:grid sm:grid-cols-2">
+        {FEATURES.map((f) => (
+          <li key={f.title} className="flex gap-2.5">
+            <span aria-hidden className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-gold" />
+            <span>
+              <span className="block font-serif text-[15px] font-bold text-ink">{f.title}</span>
+              <span className="block text-sm leading-snug text-ink-soft">{f.body}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
