@@ -51,7 +51,7 @@ export default function Synastry({
       <section className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
         <h2 className="font-serif text-2xl font-bold">合盤配對</h2>
         <p className="mt-1 max-w-[40em] text-[15px] text-ink-soft">
-          輸入對方的生辰，看兩張命盤之間的四化互動、生肖與五行，了解彼此帶給對方什麼。
+          輸入對方的生辰，比較兩張命盤，看你們在哪些事上容易互相幫忙，哪些地方可能要多溝通。
         </p>
         <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-ink-soft">你們的關係</legend>
@@ -129,7 +129,7 @@ export default function Synastry({
               </p>
               <div className="mt-2 flex flex-wrap items-end gap-3">
                 <span className="font-serif text-5xl font-bold tabular-nums">{result.score}</span>
-                <span className="pb-1 text-sm text-muted">契合度</span>
+                <span className="pb-1 text-sm text-muted">分 · 命盤契合度</span>
                 <span className={`mb-1 rounded-full px-3 py-1 text-base font-bold ${GRADE_BADGE[result.grade]}`}>{result.grade}</span>
               </div>
               <p className="mt-3 max-w-[32em] text-lg leading-relaxed text-ink">{result.headline}</p>
@@ -164,7 +164,7 @@ export default function Synastry({
         ) : (
           <div className="rounded-2xl border border-dashed border-line-strong p-8 text-center text-ink-soft">
             <p className="font-serif text-lg">輸入對方的生辰後，這裡會顯示合盤結果</p>
-            <p className="mt-2 text-sm text-muted">包含四化互入、命盤呼應、生肖與五行局</p>
+            <p className="mt-2 text-sm text-muted">可以分開看你帶給對方的影響，以及對方帶給你的影響。</p>
           </div>
         )}
       </div>
@@ -182,10 +182,10 @@ function CrossingCard({ title, receiver, items }: { title: string; receiver: str
             <span className={`row-span-2 mt-0.5 h-fit rounded px-1.5 text-sm leading-6 font-bold ${MUTAGEN_STYLE[c.mutagen]}`}>
               {c.mutagen}
             </span>
+            <span className="text-[15px] leading-relaxed text-ink-soft">{c.text}</span>
             <span className="text-sm text-muted">
               {c.star}化{c.mutagen} → {receiver}的{c.palace}
             </span>
-            <span className="text-[15px] leading-relaxed text-ink-soft">{c.text}</span>
           </li>
         ))}
       </ul>

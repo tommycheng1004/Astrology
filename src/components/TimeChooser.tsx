@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SavedBirth } from "@/components/BirthForm";
+import TimeComparison from "@/components/TimeComparison";
 import EventRectification from "@/components/EventRectification";
 import type { TimeChoice } from "@/lib/buildChart";
 
@@ -22,6 +23,10 @@ export default function TimeChooser({
   onPick: (timeIndex: number) => void;
   onCancel: () => void;
 }) {
+  const [firstIndex, setFirstIndex] = useState(choices[0].timeIndex);
+  const [secondIndex, setSecondIndex] = useState(choices[choices.length - 1].timeIndex);
+  const first = choices.find((c) => c.timeIndex === firstIndex)!;
+  const second = choices.find((c) => c.timeIndex === secondIndex)!;
   const ref = useRef<HTMLElement>(null);
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -38,10 +43,10 @@ export default function TimeChooser({
       <div className="flex flex-wrap items-end justify-between gap-3 px-1">
         <div>
           <h1 id="time-chooser-title" className="font-serif text-2xl font-bold tracking-wide sm:text-3xl">
-            哪個時辰最像你？
+            比對出生時辰
           </h1>
           <p className="mt-2 max-w-[40em] text-[15px] leading-relaxed text-ink-soft">
-            時辰決定命宮在哪裡，也就決定了命宮主星。讀讀看下面的個性描述，挑一個最像自己的；拿不定主意時，可以請熟悉你的人一起看。之後確認了出生時間，再回來重新排盤。
+            選兩個可能的時辰，看換了時辰會改變哪些盤面資料。若要確認實際出生時間，可再核對出生紀錄。
           </p>
         </div>
         <button
@@ -53,6 +58,35 @@ export default function TimeChooser({
         </button>
       </div>
 
+      <section aria-label="候選時辰對照" className="mt-5 rounded-2xl border border-line bg-surface p-4 sm:p-6">
+        <h2 className="font-serif text-xl font-bold">候選時辰對照</h2>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {[first, second].map((choice, index) => (
+            <label key={index} className="min-w-0 text-sm font-medium">
+              {index === 0 ? "第一個時辰" : "第二個時辰"}
+              <select
+                className="mt-1 block min-h-11 w-full rounded-lg border border-line-strong bg-surface px-2 text-base"
+                value={choice.timeIndex}
+                onChange={(e) => (index === 0 ? setFirstIndex : setSecondIndex)(Number(e.target.value))}
+              >
+                {choices.map((c) => (
+                  <option key={c.timeIndex} value={c.timeIndex} disabled={c.timeIndex === (index === 0 ? secondIndex : firstIndex)}>
+                    {c.label}（{c.range}）
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <TimeComparison first={first} second={second} />
+        <div className="mt-4 flex flex-wrap gap-2">
+          {[first, second].map((c) => (
+            <button key={c.timeIndex} type="button" className="action-secondary" disabled={loading} onClick={() => onPick(c.timeIndex)}>
+              查看{c.label}命盤
+            </button>
+          ))}
+        </div>
+      </section>
       <div className="mt-6"><EventRectification saved={saved} onPick={onPick} /></div>
       <ul className="mt-6 grid gap-3 md:grid-cols-2">
         {choices.map((c) => (

@@ -27,13 +27,18 @@ export type AccountState = {
   user: AccountUser | null;
   sync: SyncStatus;
   syncedCount: number;
+  /** 有後台權限（只用來顯示連結；真正的權限由伺服器每次檢查） */
+  admin: boolean;
 };
 
 const HINT_KEY = "ziwei:signed-in";
+/** 上次向伺服器報到的時間與結果，6 小時內不重複報到 */
+const ME_KEY = "ziwei:me";
+const ME_INTERVAL = 6 * 3600_000;
 const OPEN_EVENT = "ziwei:open-account";
 export const ACCOUNT_CLOSE_EVENT = "ziwei:close-account";
 
-const INITIAL: AccountState = { enabled: FIREBASE_ENABLED, ready: false, user: null, sync: "idle", syncedCount: 0 };
+const INITIAL: AccountState = { enabled: FIREBASE_ENABLED, ready: false, user: null, sync: "idle", syncedCount: 0, admin: false };
 let state = INITIAL;
 const listeners = new Set<() => void>();
 
@@ -82,16 +87,18 @@ async function handleUser(user: User | null, app: FirebaseApp) {
   if (!user) {
     try {
       localStorage.removeItem(HINT_KEY);
+      localStorage.removeItem(ME_KEY);
     } catch {}
     const { stopCloudSync } = await import("@/lib/cloudCharts");
     stopCloudSync();
-    set({ ready: true, user: null, sync: "idle", syncedCount: 0 });
+    set({ ready: true, user: null, sync: "idle", syncedCount: 0, admin: false });
     return;
   }
   try {
     localStorage.setItem(HINT_KEY, "1");
   } catch {}
   set({ ready: true, user: toAccountUser(user), sync: "syncing" });
+  void checkIn(user);
   try {
     const { startCloudSync } = await import("@/lib/cloudCharts");
     set({ sync: "done", syncedCount: await startCloudSync(app, user.uid) });
@@ -99,6 +106,29 @@ async function handleUser(user: User | null, app: FirebaseApp) {
     console.warn("命盤同步失敗", e);
     set({ sync: "error" });
   }
+}
+
+/**
+ * 向伺服器報到：更新會員索引（最近使用時間、Email 驗證狀態），並得知有沒有後台權限。
+ * 失敗不影響任何前台功能。
+ */
+async function checkIn(user: User, force = false) {
+  try {
+    const last = JSON.parse(localStorage.getItem(ME_KEY) ?? "null") as { uid: string; at: number; admin: boolean } | null;
+    if (!force && last?.uid === user.uid && Date.now() - last.at < ME_INTERVAL) {
+      set({ admin: last.admin });
+      return;
+    }
+  } catch {}
+  try {
+    const res = await fetch("/api/me", { method: "POST", headers: { Authorization: `Bearer ${await user.getIdToken()}` } });
+    if (!res.ok) return;
+    const admin = (await res.json()).admin === true;
+    set({ admin });
+    try {
+      localStorage.setItem(ME_KEY, JSON.stringify({ uid: user.uid, at: Date.now(), admin }));
+    } catch {}
+  } catch {}
 }
 
 function toAccountUser(user: User): AccountUser {
@@ -233,6 +263,7 @@ export async function refreshVerification() {
   await user.reload();
   await user.getIdToken(true);
   set({ user: toAccountUser(user) });
+  if (user.emailVerified) void checkIn(user, true);
   return user.emailVerified;
 }
 
@@ -250,6 +281,21 @@ export async function currentIdToken(forceRefresh = false): Promise<string | nul
   if (!state.user || !engine) return null;
   const { auth } = await engine;
   return auth.currentUser ? auth.currentUser.getIdToken(forceRefresh) : null;
+}
+
+/**
+ * 重新登入確認身分（後台修改資料前，登入超過 12 小時時要求）。
+ * Google 帳號直接重新選帳號；Email 帳號回傳 false，請使用者登出再登入。
+ */
+export async function reauthenticate(): Promise<boolean> {
+  const { auth, mod } = await loadAccount();
+  const user = auth.currentUser;
+  if (!user || !user.providerData.some((p) => p.providerId === "google.com")) return false;
+  const provider = new mod.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account", login_hint: user.email ?? "" });
+  await mod.reauthenticateWithPopup(user, provider);
+  await user.getIdToken(true);
+  return true;
 }
 
 /** 從網站其他地方（例如 AI 額度用完）打開登入視窗 */

@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
         ],
       },
+      {
+        // 後台與後台 API 不讓搜尋引擎收錄（頁面另有 noindex，這裡連 API 回應也涵蓋）
+        source: "/(admin|api/admin)/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/admin",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
     ];
   },
   // 不啟用 cacheComponents / partialPrefetching：本站以靜態頁為主，

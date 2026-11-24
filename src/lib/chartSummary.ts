@@ -123,5 +123,5 @@ export function summarizeChart(astrolabe: Astrolabe, rulesText: string, now = ne
 
   const evidence = chartFacts(astrolabe, h);
   lines.push("", "【預先算好的事實】", ...evidence.facts.map(factText));
-  return { summary: lines.join("\n"), ...evidence };
+  return { summary: lines.join("\n"), period: [sel.year, sel.monthKey], ...evidence };
 }

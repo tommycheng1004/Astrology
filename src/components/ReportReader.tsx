@@ -12,8 +12,15 @@ export function MonthFocus({ focus }: { focus: MonthReport | null }) {
   if (!focus) return <p>這個月超出可推算的運限範圍。</p>;
   return (
     <dl className="space-y-2">
-      <div><dt className="font-bold">可多著力 · {focus.best.label}</dt><dd>{focus.best.insight}</dd></div>
-      <div><dt className="font-bold">需要留意 · {focus.watch.label}</dt><dd>{focus.watch.insight}</dd></div>
+      {([["可以多花心力", focus.best], ["需要留意", focus.watch]] as const).map(([title, item]) => (
+        <div key={title}>
+          <dt className="font-bold">{title} · {item.label}</dt>
+          <dd>
+            {item.summary && <p>{item.summary}</p>}
+            {item.insight && <p className={item.summary ? "mt-1 text-sm text-ink-soft" : undefined}>{item.summary && "盤面依據 · "}{item.insight}</p>}
+          </dd>
+        </div>
+      ))}
     </dl>
   );
 }
@@ -74,13 +81,15 @@ export default function ReportReader() {
           <p>{facts.summary}</p>
           <section className="space-y-2">
             <h2 className="font-serif text-xl font-bold">十項流年運勢</h2>
-            <dl className="grid grid-cols-2 gap-2">
-              {facts.aspects.map((item) => <div key={item.label}><dt className="font-bold">{item.label}</dt><dd>{item.level} · {item.score} 分</dd></div>)}
+            <p>分數越高，代表依本站規則，這張命盤在該面向可借力的地方越多。</p>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              {facts.aspects.map((item) => <div key={item.label}><dt className="font-bold">{item.label}</dt><dd>{item.summary && <p>{item.summary}</p>}{item.level} · {item.score} 分</dd></div>)}
             </dl>
           </section>
           <section className="space-y-2">
             <h2 className="font-serif text-xl font-bold">犯太歲與流年四化</h2>
             <p>{facts.taisui.length ? facts.taisui.map((item) => `${item}太歲`).join("、") : "依本站生肖規則，未遇到犯太歲的組合。"}</p>
+            <p>四化是命盤上的四種標記。傳統上用「祿」看機會、「權」看主導權、「科」看名聲與助力、「忌」看容易卡住的地方。下面列的是今年這些標記落在哪裡。</p>
             <ul className="list-disc pl-5">{facts.mutagens.map((item) => <li key={item.change}>{item.star}化{item.change}入本命{item.palace}</li>)}</ul>
           </section>
           <section className="space-y-4">

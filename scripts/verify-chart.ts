@@ -245,3 +245,5 @@ for (const k of items) {
 }
 
 console.log(`\n與 Intl 不同的日期（${lunarMismatch.length} 筆）：${lunarMismatch.join("；")}`);
+
+if (unexpectedLunar.length || Object.keys(errors).some((key) => key !== "農曆換算")) process.exitCode = 1;

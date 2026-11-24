@@ -7,12 +7,12 @@ export function chartText(chart: Pick<Chart, "astrolabe" | "rulesText">, now = n
 }
 
 export function chartTextWithFacts(chart: Pick<Chart, "astrolabe" | "rulesText">, now = new Date()) {
-  const { summary, facts, placements } = summarizeChart(chart.astrolabe, chart.rulesText, now);
+  const { summary, period, facts, placements } = summarizeChart(chart.astrolabe, chart.rulesText, now);
   const text = [
     summary,
     "",
     SITE_URL,
     "請只根據以上資料解讀，不要自行推算星曜位置",
   ].join("\n");
-  return { text, facts, placements };
+  return { text, facts, placements, period };
 }

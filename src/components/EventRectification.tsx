@@ -108,7 +108,7 @@ function EventForm({ saved, onPick }: { saved: SavedBirth; onPick?: (timeIndex: 
       <p role="status">{busy ? "處理中…" : status}</p>
       {ranking && (
         <>
-          <p className="text-ink-soft">每件事以流年與大限（或童限）的相應宮位為基礎，依四化微調；較難應對的事件以壓力跡象比對。分數只用來排列候選時辰。涉及健康，請諮詢專業人士。</p>
+          <p className="text-ink-soft">以換工作為例，系統會看你填的那一年，哪張候選盤的工作面向較符合這件事。分數用來比較時辰的先後；要確認出生時間，仍應核對出生紀錄。涉及健康，請諮詢專業人士。</p>
           <ol className="space-y-2">
             {ranking.map((candidate) => <li key={candidate.index} className="rounded-lg border border-line px-3">
               <details>

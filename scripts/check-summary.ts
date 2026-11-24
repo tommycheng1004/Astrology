@@ -26,7 +26,9 @@ async function main() {
       const title = name(index);
       const opposite = (index + 6) % 12;
       add("本命", `${title}三方四正：${[index, opposite, (index + 4) % 12, (index + 8) % 12].map((pos) => `${name(pos)}有${stars(chart.palaces[pos]).concat(chart.palaces[pos].adjectiveStars).map((s) => s.name).join("、") || "無星曜"}`).join("；")}`);
-      if (!palace.majorStars.some((s) => s.scope === "origin")) {
+      const majors = palace.majorStars.filter((s) => s.scope === "origin");
+      if (majors.length) add("本命", `${title}有${majors.map((s) => s.name).join("、")}`);
+      else {
         const borrowed = chart.palaces[opposite].majorStars.filter((s) => s.scope === "origin").map((s) => s.name).join("、");
         add("借星", `${title}無主星，借對宮${name(opposite)}的${borrowed || "主星（對宮亦空）"}`);
       }
@@ -42,7 +44,7 @@ async function main() {
       }
     }
     if (h) {
-      for (const [layer, period] of [["大限", h.decadal], ["流年", h.yearly], ["流月", h.monthly]] as const) {
+      for (const [layer, period] of [[h.decadal.name === "童限" ? "童限" : "大限", h.decadal], ["流年", h.yearly], ["流月", h.monthly]] as const) {
         add(layer, `${layer}命宮在本命${name(period.index)}`);
         period.mutagen.forEach((star, index) => {
           const target = placeOf(star);

@@ -27,7 +27,7 @@ export function personalityHighlight(astrolabe: Astrolabe) {
   return {
     title: persona.title,
     sentence: persona.text.match(/^[^。！？]+[。！？]?/)?.[0] ?? persona.text,
-    stars: persona.borrowedFrom ? `借${persona.borrowedFrom}的${persona.stars}` : `${persona.stars}坐命`,
+    stars: persona.borrowedFrom ? `命宮沒有主星，參考對面${persona.borrowedFrom}的${persona.stars}` : `命宮的主星是${persona.stars}`,
   };
 }
 

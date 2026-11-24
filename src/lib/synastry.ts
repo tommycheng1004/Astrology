@@ -121,8 +121,6 @@ function elementMatch(a: Astrolabe, b: Astrolabe, nameA: string, nameB: string) 
   return { score: -3, text: `${head}，${eb}剋${ea}，${nameB}容易在不自覺中給${nameA}壓力。` };
 }
 
-const ROLE: Record<string, string> = { 夫妻: "伴侶", 子女: "孩子", 父母: "父母", 僕役: "夥伴" };
-
 /** 出生先後，用來判斷親子關係中誰是父母 */
 function birthOrder(astro: Astrolabe) {
   const [y, m, d] = astro.solarDate.split("-").map(Number);
@@ -134,17 +132,20 @@ function echo(a: Astrolabe, b: Astrolabe, focus: string, nameA: string, nameB: s
   const majorsOf = (astro: Astrolabe, name: string) => {
     const p = astro.palaces.find((x) => x.name === name)!;
     const src = p.majorStars.length ? p : astro.palaces[surroundedIndexes(p.index).opposite];
-    return src.majorStars.map((s) => s.name);
+    return {
+      stars: src.majorStars.map((s) => s.name),
+      source: src === p ? palaceTitle(name) : `${palaceTitle(name)}（借對面${palaceTitle(src.name)}的主星）`,
+    };
   };
   const aFocus = majorsOf(a, focus);
   const bSoul = majorsOf(b, "命宮");
-  const shared = aFocus.filter((s) => bSoul.includes(s));
+  const shared = aFocus.stars.filter((s) => bSoul.stars.includes(s));
   if (shared.length)
     return {
       score: 6,
-      text: `${nameA}的${palaceTitle(focus)}是${aFocus.join("、")}，${nameB}的命宮正好有${shared.join("、")}：${nameB}就是${nameA}命中注定的那種${ROLE[focus]}類型。`,
+      text: `${nameA}的${aFocus.source}與${nameB}的${bSoul.source}都參考${shared.join("、")}。這是兩張盤在這段關係上的一個共同點。`,
     };
-  return { score: 0, text: `${nameA}的${palaceTitle(focus)}是${aFocus.join("、")}，${nameB}的命宮是${bSoul.join("、")}，類型不同，需要時間磨合。` };
+  return { score: 0, text: `${nameA}的${aFocus.source}看${aFocus.stars.join("、")}，${nameB}的${bSoul.source}看${bSoul.stars.join("、")}。兩邊參考的主星不同，可以聊聊彼此習慣怎麼相處。` };
 }
 
 export type SynastryResult = {
@@ -177,7 +178,7 @@ export function analyzeSynastry(a: Astrolabe, b: Astrolabe, relation: Relation, 
       : score >= 65
         ? "整體契合，相處順利，小摩擦也容易化解。"
         : score >= 45
-          ? "有合有不合，用心經營就能走得長久。"
+          ? "有些地方合拍，有些需要磨合，可以從下面的相處提醒找一件事聊聊。"
           : score >= 30
             ? "差異比較大，需要更多的溝通與包容。"
             : "考驗較多，彼此要多給空間、放慢腳步。";

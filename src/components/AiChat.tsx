@@ -34,6 +34,7 @@ const readConsent = () => {
 };
 
 export default function AiChat({ chart }: { chart: Chart }) {
+  const chartLabel = `排盤採用國曆 ${chart.astrolabe.solarDate} ${chart.astrolabe.time}・${chart.input.gender}${chart.variant === "alt" ? "（候選時辰）" : ""}`;
   const stored = useSyncExternalStore(subscribe, readConsent, () => false);
   const [agreed, setAgreed] = useState(false);
   const consent = stored || agreed;
@@ -127,7 +128,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
         return fetch("/api/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}) },
-          body: JSON.stringify({ birth: shareHash(chart.saved).slice(3), variant: chart.variant, messages: history, sig, suggestion }),
+          body: JSON.stringify({ birth: shareHash(chart.saved).slice(3), variant: chart.variant, messages: history.map(({ role, content }) => ({ role, content })), sig, suggestion }),
           signal: controller.signal,
         });
       };
@@ -170,7 +171,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
     } finally {
       abortRef.current = null;
     }
-    if (stop === "refusal") failure = "這個問題 AI 無法回答，換個問法試試看。";
+    if (stop === "refusal") failure = "這次沒有取得可核對的解讀。可以指定想看的主題或年份再問。";
     if (text && nextSig && stop !== "refusal") {
       setTurns([...history, { role: "assistant", content: text.trim(), facts, filtered }]);
       setSig(nextSig);
@@ -197,12 +198,13 @@ export default function AiChat({ chart }: { chart: Chart }) {
           問 AI 命理師
         </h2>
         <p className="mt-2 max-w-[40em] text-[15px] leading-relaxed text-ink-soft">
-          AI 會根據你的命盤回答問題，例如工作方向、今年運勢、感情與財運。
+          提問時，會用你目前打開的這張命盤解讀。你可以問「我適合怎樣的工作方式？」
+          <span className="mt-1 block font-medium text-ink">{chartLabel}</span>
         </p>
         <div className="mt-4 rounded-xl bg-surface-2/60 p-4 text-sm leading-relaxed text-ink-soft">
           <p className="font-medium text-ink">使用前請先了解</p>
           <ul className="mt-1 space-y-1">
-            <li>・排盤本身仍在你的瀏覽器計算；不使用 AI 就不會傳出任何資料。</li>
+            <li>・送出問題後，網站會用你的生辰和出生地重新排盤，再把命盤資料和對話交給 AI。生辰資料不含姓名。</li>
             <li>・AI 的回答僅供參考，可能有錯，不構成醫療、法律或投資建議。</li>
             <li>・提問時請不要輸入姓名、電話、身分證字號等個人資料。</li>
           </ul>
@@ -247,7 +249,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
                 <h2 id="ai-title" className="font-serif text-lg font-bold leading-tight">
                   AI 命理老師
                 </h2>
-                <p className="text-xs text-muted">看過你的命盤，有問題直接問</p>
+                <p className="text-xs text-muted">{chartLabel}</p>
               </div>
             </div>
             {turns.length > 0 && !busy && (
@@ -282,7 +284,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
             </p>
             <ol aria-label="對話" className="space-y-4 py-5">
               {/* 開場白只在畫面上，不送給模型 */}
-              <Message turn={{ role: "assistant", content: "我已經看過你的命盤了。想先聊哪一塊？工作、感情、財運，或是今年的運勢都可以問我。" }} />
+              <Message turn={{ role: "assistant", content: "想了解工作、感情，還是今年的生活重點？我會先用白話回答，再告訴你這張命盤上是哪一點讓我這樣看。" }} />
               {turns.map((t, i) => (
                 <Message key={i} turn={t} />
               ))}
@@ -445,12 +447,16 @@ function Message({ turn, pending = false }: { turn: Turn; pending?: boolean }) {
         ))}
         {turn.filtered && <p className="text-xs text-ink-soft">已移除與命盤資料不符的句子。</p>}
         {!!turn.facts?.length && (
-          <details className="border-t border-line">
-            <summary className="flex min-h-11 cursor-pointer items-center font-bold text-accent">依據</summary>
-            <ul className="space-y-2 text-sm text-ink-soft">
-              {turn.facts.map((fact) => <li key={fact.id}>{fact.id} · {fact.layer} · {fact.text}</li>)}
-            </ul>
-          </details>
+          <div className="border-t border-line pt-2 text-sm text-ink-soft">
+            <p className="font-medium text-ink">這張命盤上的依據</p>
+            <p>{turn.facts[0].layer} · {turn.facts[0].text.includes("三方四正") ? `${turn.facts[0].palace}與對宮、兩個三合宮的星曜` : turn.facts[0].text}</p>
+            <details>
+              <summary className="min-h-11 cursor-pointer py-2.5 font-medium text-accent">查看盤面原文</summary>
+              <ul className="space-y-2">
+                {turn.facts.map((fact) => <li key={fact.id}>{fact.id} · {fact.layer} · {fact.text}</li>)}
+              </ul>
+            </details>
+          </div>
         )}
       </div>
     </Tag>

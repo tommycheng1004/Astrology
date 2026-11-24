@@ -16,7 +16,14 @@ export default function MemberHome() {
   const account = useSyncExternalStore(subscribeAccount, accountSnapshot, accountServerSnapshot);
   return (
     <>
-      <h1 className="font-serif text-3xl font-bold sm:text-4xl">會員中心</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="font-serif text-3xl font-bold sm:text-4xl">會員中心</h1>
+        {account.admin && (
+          <Link href="/admin" className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent">
+            管理後台 →
+          </Link>
+        )}
+      </div>
       {!account.enabled ? <p className="mt-3 text-ink-soft">會員功能目前尚未開放。</p> : account.user
         ? <MemberTools key={account.user.uid} />
         : !account.ready

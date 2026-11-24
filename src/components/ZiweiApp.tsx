@@ -17,7 +17,7 @@ import {
   type SavedChart,
 } from "@/lib/savedCharts";
 import { accountServerSnapshot, accountSnapshot, openAccountDialog, subscribeAccount } from "@/lib/account";
-import { parseShareHash } from "@/lib/shareLink";
+import { parseSharedChart } from "@/lib/shareLink";
 import { EngineLoadError, MAX_YEAR, MIN_YEAR } from "@/lib/ziwei";
 
 /*
@@ -99,8 +99,8 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
   // 從分享連結（#c=…）開啟時直接排出那張命盤，不存進「我的命盤」
   useEffect(() => {
     function openShared() {
-      const shared = parseShareHash(location.hash);
-      if (shared) run(shared, "main", "share");
+      const shared = parseSharedChart(location.hash);
+      if (shared) run(shared.saved, shared.variant, "share");
     }
     openShared();
     window.addEventListener("hashchange", openShared);

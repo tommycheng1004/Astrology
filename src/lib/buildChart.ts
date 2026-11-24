@@ -3,6 +3,7 @@ import { resolveBirth, type ResolvedBirth } from "@/lib/birthtime";
 import { analyzeNatal, type AspectResult } from "@/lib/fortune";
 import { nowSelection, type Selection } from "@/lib/periods";
 import { bodyPalaceText, soulPersona } from "@/lib/personality";
+import { timeComparisonFacts, type TimeComparisonFacts } from "@/lib/timeComparison";
 import { chartRulesText, computeAstrolabe, TIME_SLOTS, type Astrolabe, type BirthInput } from "@/lib/ziwei";
 
 /**
@@ -52,6 +53,7 @@ export type TimeChoice = {
   title: string;
   text: string;
   body: string | null;
+  facts: TimeComparisonFacts;
 };
 
 /** 不知道時辰：每個時辰各排一張盤，列出命宮主星與個性供使用者挑選 */
@@ -65,6 +67,7 @@ export async function buildTimeChoices(saved: SavedBirth): Promise<TimeChoice[]>
       const majors = soul.majorStars.map((s) => s.name).join("、");
       const body = bodyPalaceText(astrolabe);
       return {
+        facts: timeComparisonFacts(astrolabe),
         timeIndex: slot.index,
         label: slot.label,
         range: slot.range,

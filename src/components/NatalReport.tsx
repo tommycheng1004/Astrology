@@ -2,6 +2,8 @@
 
 import { useMemo, type ReactNode } from "react";
 import FortuneList, { headlineOf } from "@/components/FortuneList";
+import GlossText, { GlossaryList } from "@/components/GlossText";
+import { glossParts, termsIn } from "@/content/glossary";
 import type { AspectResult } from "@/lib/fortune";
 import { readOtherPalace } from "@/lib/palaceReadings";
 import { analyzePatterns, type PatternResult } from "@/lib/patterns";
@@ -19,7 +21,7 @@ type Props = {
 const SECTIONS = [
   { id: "sec-persona", label: "性格" },
   { id: "sec-patterns", label: "格局" },
-  { id: "sec-fortune", label: "五運" },
+  { id: "sec-fortune", label: "五大生活面向" },
   { id: "sec-palaces", label: "其他宮位" },
   { id: "sec-traits", label: "桃花財富職業" },
 ];
@@ -40,6 +42,21 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
     [astrolabe],
   );
   const { persona, body, patterns, others, peach, wealth, career } = data;
+  const terms = useMemo(
+    () =>
+      termsIn([
+        persona?.text ?? "",
+        body?.text ?? "",
+        ...patterns.flatMap((p) => [p.name, p.status ?? "", p.meaning, p.condition, p.reason ?? ""]),
+        ...[...natal, ...others].flatMap((r) => r.insights.map((x) => x.text)),
+        ...peach.found,
+        ...wealth.notes,
+        wealth.basis,
+        career.workStyle,
+        career.basis,
+      ]),
+    [persona, body, patterns, natal, others, peach, wealth, career],
+  );
 
   return (
     <div className="space-y-12">
@@ -57,24 +74,27 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
           ))}
         </ul>
       </nav>
+      <p className="-mt-8 text-sm text-muted">
+        解析保留紫微斗數的專有名詞；<span className="underline decoration-accent/50 decoration-dotted decoration-[1.5px] underline-offset-[5px]">虛線底線</span>的詞點一下，就會出現白話解釋。
+      </p>
 
       {/* 性格 */}
       <Section id="sec-persona" kicker="命宮主星" title="你的個性">
         {persona && (
           <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
             <p className="text-sm text-muted">
-              {persona.borrowedFrom ? `命宮無主星，借${persona.borrowedFrom}的${persona.stars}` : `${persona.stars}坐命`}
+              <GlossText text={persona.borrowedFrom ? `命宮沒有主星，解讀個性時參考對面${persona.borrowedFrom}的${persona.stars}` : `命宮裡的主星是${persona.stars}`} />
             </p>
             <h3 className="mt-1 font-serif text-2xl font-bold text-accent">{persona.title}</h3>
-            <p className="mt-3 max-w-[40em] text-base leading-[1.8] text-ink-soft">{persona.text}</p>
+            <p className="mt-3 max-w-[40em] text-base leading-[1.8] text-ink-soft"><GlossText text={persona.text} /></p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <TraitList title="優點" tone="good" items={persona.strengths} />
               <TraitList title="要留意" tone="bad" items={persona.cautions} />
             </div>
             {body && (
               <div className="mt-5 rounded-xl bg-surface-2/60 p-4">
-                <p className="text-sm font-medium text-ink">身宮在{body.palace}</p>
-                <p className="mt-1 max-w-[40em] text-[15px] leading-relaxed text-ink-soft">{body.text.replace(/^[^：]+：/, "")}</p>
+                <p className="text-sm font-medium text-ink"><GlossText text={`生活重心（身宮在${body.palace}）`} /></p>
+                <p className="mt-1 max-w-[40em] text-[15px] leading-relaxed text-ink-soft"><GlossText text={body.text.replace(/^[^：]+：/, "")} /></p>
               </div>
             )}
           </div>
@@ -82,7 +102,7 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
       </Section>
 
       {/* 格局 */}
-      <Section id="sec-patterns" kicker="格局判定" title="命盤格局">
+      <Section id="sec-patterns" kicker="命盤格局" title="這些星放在一起，傳統上怎麼解讀？">
         {patterns.length ? (
           <ul className="space-y-3">
             {patterns.map((p) => (
@@ -95,7 +115,7 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
           </p>
         )}
         <p className="mt-3 text-xs text-muted">
-          格局依《紫微斗數全書》與通行說法判定；吉格遇化忌坐命或煞星會照會減分甚至破格。各家對格局條件的寬嚴略有不同，僅供參考。
+          「格局」是古人替特定星曜組合取的名字。本站依《紫微斗數全書》與通行說法判讀；各派採用的條件可能不同。
         </p>
       </Section>
 
@@ -116,7 +136,7 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
 
       {/* 其他宮位 */}
       <Section id="sec-palaces" kicker="十二宮" title="其他宮位">
-        <p className="mb-2 text-sm text-muted">命宮、兄弟、子女、田宅、福德、父母、遷移。五運相關的宮位在上方「五運」。</p>
+        <p className="mb-2 text-sm text-muted">命宮、兄弟、子女、田宅、福德、父母、遷移。想看工作、金錢、感情、健康或人際關係，可回到上方的「五大生活面向」。</p>
         <FortuneList results={others} onSelectPalace={onSelectPalace} />
       </Section>
 
@@ -133,7 +153,7 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
             </div>
             <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{peach.text}</p>
             {peach.found.length > 0 && (
-              <p className="mt-2 text-sm text-muted">桃花星：{peach.found.join("；")}</p>
+              <p className="mt-2 text-sm text-muted"><GlossText text={`桃花星：${peach.found.join("；")}`} /></p>
             )}
           </Card>
           <Card title="財富類型">
@@ -142,12 +162,12 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
             <p className="mt-2 text-[15px] leading-relaxed text-ink">建議：{wealth.advice}</p>
             {wealth.notes.length > 0 && (
               <ul className="mt-2 space-y-1 text-sm text-ink-soft">
-                {wealth.notes.map((n) => (
-                  <li key={n}>・{n}</li>
+                {glossParts(wealth.notes).map((parts, i) => (
+                  <li key={wealth.notes[i]}>・<GlossText parts={parts} /></li>
                 ))}
               </ul>
             )}
-            <p className="mt-2 text-xs text-muted">依據：{wealth.basis}</p>
+            <p className="mt-2 text-xs text-muted">依據：<GlossText text={wealth.basis} /></p>
           </Card>
           <Card title="適合的行業">
             <ul className="flex flex-wrap gap-2">
@@ -157,11 +177,20 @@ export default function NatalReport({ astrolabe, natal, onSelectPalace, onOpenFo
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{career.workStyle}</p>
-            <p className="mt-2 text-xs text-muted">依據：{career.basis}</p>
+            {(() => {
+              const [style, basis] = glossParts([career.workStyle, career.basis]);
+              return (
+                <>
+                  <p className="mt-3 text-[15px] leading-relaxed text-ink-soft"><GlossText parts={style} /></p>
+                  <p className="mt-2 text-xs text-muted">依據：<GlossText parts={basis} /></p>
+                </>
+              );
+            })()}
           </Card>
         </div>
       </Section>
+
+      <GlossaryList entries={terms} />
     </div>
   );
 }
@@ -217,6 +246,7 @@ const KIND_STYLE: Record<string, string> = {
 };
 
 function PatternCard({ pattern: p }: { pattern: PatternResult }) {
+  const [meaning, condition, reason] = glossParts([p.meaning, p.condition, p.reason ?? ""]);
   return (
     <li className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-2">
@@ -224,14 +254,13 @@ function PatternCard({ pattern: p }: { pattern: PatternResult }) {
         <span className={`rounded-full border px-2 py-0.5 text-xs ${KIND_STYLE[p.kind]}`}>{p.kind}</span>
         {p.status && <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold ${STATUS_STYLE[p.status]}`}>{p.status}</span>}
       </div>
-      <p className="mt-2 max-w-[40em] text-base leading-relaxed text-ink-soft">{p.meaning}</p>
-      {p.reason && (
-        <p className="mt-2 text-sm text-quan">
-          {p.status === "破格" ? "破格原因：" : "干擾："}
-          {p.reason}
-        </p>
-      )}
-      <p className="mt-2 text-sm text-muted">成立條件：{p.condition}</p>
+      <p className="mt-2 max-w-[40em] text-base leading-relaxed text-ink-soft"><GlossText parts={meaning} /></p>
+      <details className="mt-1 text-sm text-ink-soft">
+        <summary className="min-h-11 cursor-pointer py-3 font-medium text-accent">為什麼這張盤有這個格局？</summary>
+        <p><GlossText parts={condition} /></p>
+        {p.status && <p className="mt-2 text-muted">「{p.status}」的意思：{p.status === "成格" ? "條件都齊了，效果比較完整。" : p.status === "破格" ? "有這個格局，但被其他不利的星干擾，效果打了折扣。" : "條件大致成立，但有些星會削弱它的效果。"}</p>}
+        {p.reason && <p className="mt-2">{p.status === "破格" ? "這張盤還有其他星曜，使原本的有利條件減弱。" : "以下星曜也會影響這個組合。"}<GlossText parts={reason} /></p>}
+      </details>
     </li>
   );
 }

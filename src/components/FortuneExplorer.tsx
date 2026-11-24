@@ -360,7 +360,7 @@ export default function FortuneExplorer({ astrolabe, input, rulesText, now, init
               <dl className="mt-4 grid gap-3 border-t border-line pt-4 text-[15px] sm:grid-cols-[6.5rem_1fr]">
                 <dt className="text-sm text-muted">重點月份</dt>
                 <dd className="flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-soft">
-                  <span>最旺</span>
+                  <span>較順利</span>
                   {yearExtras.best.map((m) => (
                     <MonthLink key={m.key} column={m} onClick={() => jumpToMonth(m.key)} tone="good" />
                   ))}
@@ -382,7 +382,7 @@ export default function FortuneExplorer({ astrolabe, input, rulesText, now, init
                   )}
                 </dd>
                 <dt className="text-sm text-muted">小限</dt>
-                <dd className="text-ink-soft">走到本命{yearExtras.smallLimit}（另一套逐年運限，可與流年合參）</dd>
+                <dd className="text-ink-soft">走到本命{yearExtras.smallLimit}。這是按年齡逐年看的位置，可以和上面的年運一起參考。</dd>
               </dl>
             )}
             {nextScale && scaleMeta.drill && (

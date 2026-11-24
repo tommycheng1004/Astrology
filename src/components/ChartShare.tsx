@@ -29,7 +29,7 @@ export default function ChartShare({ chart }: { chart: Chart }) {
 
   async function shareLink() {
     setStatus("");
-    const url = shareUrl(chart.saved);
+    const url = shareUrl(chart.saved, chart.variant);
     try {
       if (navigator.share) await navigator.share({ title: "我的紫微命盤", url });
       else {
@@ -104,7 +104,7 @@ export default function ChartShare({ chart }: { chart: Chart }) {
           <div className="grid gap-1">
             {personality && <button type="button" onClick={() => makeImage("persona")} disabled={busy} className="action-primary w-full">{busy ? "製作圖片中…" : "製作命盤個性卡"}</button>}
             <button type="button" onClick={shareLink} className={item}>分享命盤連結</button>
-            {active && <a href={lineShareHref(chart.saved)} target="_blank" rel="noopener noreferrer" className={item}>傳到 LINE</a>}
+            {active && <a href={lineShareHref(chart.saved, chart.variant)} target="_blank" rel="noopener noreferrer" className={item}>傳到 LINE</a>}
             <button type="button" onClick={() => makeImage("chart")} disabled={busy} className={item}>存成完整命盤圖片</button>
             {account.enabled && <button type="button" onClick={copyText} className={item}>複製 AI 文字盤</button>}
             <p className="mt-1 text-xs text-ink-soft">個性卡只含個性摘要。命盤連結含生辰，請分享給信任的人。</p>

@@ -1,4 +1,5 @@
 import type { SavedBirth } from "@/components/BirthForm";
+import type { Chart } from "@/lib/buildChart";
 import { PLACES } from "@/lib/birthtime";
 import { daysInMonth, leapMonthOf, MAX_YEAR, MIN_YEAR } from "@/lib/ziwei";
 
@@ -29,8 +30,20 @@ export function shareHash(saved: SavedBirth) {
   return `#c=${parts.join(".")}`;
 }
 
-export function shareUrl(saved: SavedBirth) {
-  return `${location.origin}${location.pathname}${shareHash(saved)}`;
+/** 公開分享連結另記錄正在看的候選盤。會員 API 仍只使用原本的生辰代碼。 */
+function sharedChartFragment(saved: SavedBirth, variant: Chart["variant"]) {
+  return shareHash(saved) + (variant === "alt" ? "&v=alt" : "");
+}
+
+export function parseSharedChart(hash: string) {
+  const [birth, variant, ...extra] = hash.split("&");
+  if (extra.length || (variant !== undefined && variant !== "v=alt")) return null;
+  const saved = parseShareHash(birth);
+  return saved && { saved, variant: variant === "v=alt" ? "alt" as const : "main" as const };
+}
+
+export function shareUrl(saved: SavedBirth, variant: Chart["variant"] = "main") {
+  return `${location.origin}${location.pathname}${sharedChartFragment(saved, variant)}`;
 }
 
 /**
@@ -39,8 +52,8 @@ export function shareUrl(saved: SavedBirth) {
  *   之後存的命盤才會留在平常用的瀏覽器，而不是 LINE 的內建瀏覽器。
  * - 手機用 line.me/R/share 開 LINE 的分享畫面；電腦版 LINE 不支援這個網址，改用 LINE 的網頁分享。
  */
-export function lineShareHref(saved: SavedBirth) {
-  const url = `${location.origin}${location.pathname}?openExternalBrowser=1${shareHash(saved)}`;
+export function lineShareHref(saved: SavedBirth, variant: Chart["variant"] = "main") {
+  const url = `${location.origin}${location.pathname}?openExternalBrowser=1${sharedChartFragment(saved, variant)}`;
   const touch = window.matchMedia("(pointer: coarse)").matches;
   return touch
     ? `https://line.me/R/share?text=${encodeURIComponent(`我的紫微命盤 ${url}`)}`

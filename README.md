@@ -24,6 +24,10 @@ Google 登入與 Email 註冊、「我的命盤」雲端同步、AI 每日題數
 - 前端只在打開登入視窗或之前登入過時才載入 Firebase（`src/lib/account.ts`），同步用 Firestore Lite（`src/lib/cloudCharts.ts`）。
 - 伺服器不用 firebase-admin：`src/lib/server/firebase.ts` 以 jose 驗證 ID token、以 Firestore REST API 儲存會員功能資料、AI 快取與每日題數。
   伺服器程式不可 import `firebase` 套件（它帶的 `@grpc/grpc-js` 有伺服器端漏洞公告，前端用不到）。
+
+## 管理後台
+
+`/admin`：營運總覽、會員查詢與個人題數、AI 開關與每日題數、稽核紀錄、後台人員角色。擁有者由環境變數 `ADMIN_OWNER_EMAILS` 指定。設計與設定見 [docs/admin.md](docs/admin.md)。
 - 安全規則在 `firestore.rules`，修改後要到 Firebase 後台發布，並跑 `npx tsx scripts/check-rules.ts`（需模擬器）。
 - `Cross-Origin-Opener-Policy` 採用 `same-origin-allow-popups`，讓 Google 登入可開啟彈出視窗。
 
@@ -54,6 +58,13 @@ npx tsx scripts/check-rules.ts      # Firestore 安全規則（需先啟動 Fire
 `npx tsx scripts/gen-solar-terms.ts <資料夾>`。
 
 升級 iztro 或改動排盤設定後請全部重跑。
+
+出生時辰對照另有 Playwright 端到端測試，涵蓋桌機及 320px 手機版面、換年、夏令時間與分享連結。測試會在本機啟動正式建置。
+
+```bash
+npx playwright install chromium   # 首次執行
+npm run build && npm run test:e2e
+```
 
 ## 目錄
 

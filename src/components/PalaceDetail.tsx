@@ -2,6 +2,7 @@
 
 import type { IFunctionalHoroscope } from "iztro/lib/astro/FunctionalHoroscope";
 import type { IFunctionalStar } from "iztro/lib/star/FunctionalStar";
+import { palaceByKey } from "@/content/palaces";
 import { flanksOf, flightsOf } from "@/lib/chartExtras";
 import { LEVEL_NAME, LEVELS, lensMutagens, type Lens } from "@/lib/periods";
 import { MUTAGEN_OUTLINE, MUTAGEN_STYLE, palaceName, palaceTitle, surroundedIndexes, type Astrolabe } from "@/lib/ziwei";
@@ -27,6 +28,7 @@ const MINOR_TYPE_LABEL: Record<string, string> = {
 
 export default function PalaceDetail({ astrolabe, selectedIndex, horoscope, lens, onSelect, bare }: Props) {
   const palace = astrolabe.palaces[selectedIndex];
+  const topics = palaceByKey(palace.name)?.covers;
   const flow = lensMutagens(horoscope, lens);
   const flowName = lens === "natal" ? "" : LEVEL_NAME[lens];
   const layerNames = horoscope
@@ -78,102 +80,108 @@ export default function PalaceDetail({ astrolabe, selectedIndex, horoscope, lens
         </div>
       </header>
 
-      <dl className="mt-5 space-y-4">
+      {topics && <p className="mt-3 text-sm leading-relaxed text-ink-soft">在本命盤裡，這一宮用來看{topics.slice(0, 2).join("、")}。</p>}
+      <dl className="mt-4 space-y-4">
         <Row label="主星">
           {palace.majorStars.length ? (
             <StarList stars={palace.majorStars} strong flow={flow} flowName={flowName} />
           ) : (
             <span className="text-sm text-muted">
-              無主星（空宮），借對宮 {palaceTitle(astrolabe.palaces[rel.opposite].name)} 主星論
+              這一宮沒有主星，稱為「空宮」。解讀時參考正對面的{palaceTitle(astrolabe.palaces[rel.opposite].name)}{astrolabe.palaces[rel.opposite].majorStars.length > 0 && `，主星是${astrolabe.palaces[rel.opposite].majorStars.map((s) => s.name).join("、")}`}。
             </span>
           )}
         </Row>
-        <Row label="輔星">
-          {palace.minorStars.length ? (
-            <StarList stars={palace.minorStars} showType flow={flow} flowName={flowName} />
-          ) : (
-            <span className="text-sm text-muted">—</span>
-          )}
-        </Row>
-        <Row label="雜曜">
-          {palace.adjectiveStars.length ? (
-            <p className="font-serif text-sm leading-relaxed text-ink-soft">
-              {palace.adjectiveStars.map((s) => s.name).join("、")}
-            </p>
-          ) : (
-            <span className="text-sm text-muted">—</span>
-          )}
-        </Row>
-        {layerNames.length > 0 && (
-          <Row label="運限">
-            <p className="text-sm leading-relaxed text-ink-soft">
-              {layerNames.map((l, i) => (
-                <span key={l.level} className={l.level === lens ? "font-bold text-accent" : ""}>
-                  {i > 0 && "・"}
-                  {LEVEL_NAME[l.level]}
-                  {palaceName(l.name)}
-                </span>
-              ))}
-            </p>
+      </dl>
+      <details className="mt-3 border-y border-line">
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-accent">查看其他星曜、四化與年齡</summary>
+        <dl className="space-y-4 pb-4">
+          <Row label="輔星">
+            {palace.minorStars.length ? (
+              <StarList stars={palace.minorStars} showType flow={flow} flowName={flowName} />
+            ) : (
+              <span className="text-sm text-muted">—</span>
+            )}
           </Row>
-        )}
-        <Row label="宮干四化">
-          <ul className="space-y-1 text-sm text-ink-soft">
-            {flights.map((f) => (
-              <li key={f.mutagen} className="flex flex-wrap items-center gap-x-1.5">
-                <span className={`rounded px-1 text-xs leading-5 font-bold ${MUTAGEN_STYLE[f.mutagen]}`}>{f.mutagen}</span>
-                <span className="font-serif">{f.star}</span>
-                <span aria-hidden className="text-muted">→</span>
-                {f.to ? (
-                  <button
-                    type="button"
-                    onClick={() => onSelect(f.to!.index)}
-                    className="inline-flex min-h-11 min-w-11 items-center justify-center px-1 font-medium text-accent underline decoration-accent/30 underline-offset-4 hover:decoration-accent"
-                  >
-                    {palaceTitle(f.to.name)}
-                  </button>
-                ) : (
-                  <span className="text-muted">盤上無此星</span>
-                )}
-                {f.self && <span className="text-xs text-gold">（自化）</span>}
-                {f.opposite && f.mutagen === "忌" && <span className="text-xs text-ji">（忌沖本宮）</span>}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-1 text-xs text-muted">本宮天干（{palace.heavenlyStem}）化出的四化飛入哪一宮，飛星派用來看宮位之間的因果。</p>
-        </Row>
-        <Row label="夾宮">
-          {flanks.length ? (
+          <Row label="雜曜">
+            {palace.adjectiveStars.length ? (
+              <p className="font-serif text-sm leading-relaxed text-ink-soft">
+                {palace.adjectiveStars.map((s) => s.name).join("、")}
+              </p>
+            ) : (
+              <span className="text-sm text-muted">—</span>
+            )}
+          </Row>
+          {layerNames.length > 0 && (
+            <Row label="運限">
+              <p className="text-sm leading-relaxed text-ink-soft">
+                {layerNames.map((l, i) => (
+                  <span key={l.level} className={l.level === lens ? "font-bold text-accent" : ""}>
+                    {i > 0 && "・"}
+                    {LEVEL_NAME[l.level]}
+                    {palaceName(l.name)}
+                  </span>
+                ))}
+              </p>
+            </Row>
+          )}
+          <Row label="宮干四化">
             <ul className="space-y-1 text-sm text-ink-soft">
-              {flanks.map((f) => (
-                <li key={f.label}>
-                  <span className={`font-medium ${f.tone === "good" ? "text-lu" : f.tone === "bad" ? "text-ji" : ""}`}>{f.label}</span>
-                  ：{f.note}
+              {flights.map((f) => (
+                <li key={f.mutagen} className="flex flex-wrap items-center gap-x-1.5">
+                  <span className={`rounded px-1 text-xs leading-5 font-bold ${MUTAGEN_STYLE[f.mutagen]}`}>{f.mutagen}</span>
+                  <span className="font-serif">{f.star}</span>
+                  <span aria-hidden className="text-muted">→</span>
+                  {f.to ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelect(f.to!.index)}
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center px-1 font-medium text-accent underline decoration-accent/30 underline-offset-4 hover:decoration-accent"
+                    >
+                      {palaceTitle(f.to.name)}
+                    </button>
+                  ) : (
+                    <span className="text-muted">盤上無此星</span>
+                  )}
+                  {f.self && <span className="text-xs text-gold">（自化）</span>}
+                  {f.opposite && f.mutagen === "忌" && <span className="text-xs text-ji">（忌沖本宮）</span>}
                 </li>
               ))}
             </ul>
-          ) : (
-            <span className="text-sm text-muted">—</span>
-          )}
-        </Row>
-        <Row label="神煞">
-          <p className="text-sm text-ink-soft">
-            長生 {palace.changsheng12}・博士 {palace.boshi12}・將前 {palace.jiangqian12}・歲前 {palace.suiqian12}
-          </p>
-        </Row>
-        <Row label="大限">
-          <p className="text-sm text-ink-soft tabular-nums">
-            {palace.decadal.range[0]}–{palace.decadal.range[1]} 歲（{palace.decadal.heavenlyStem}
-            {palace.decadal.earthlyBranch}）
-          </p>
-        </Row>
-        <Row label="小限">
-          <p className="text-sm text-ink-soft tabular-nums">{palace.ages.slice(0, 8).join("、")} 歲…</p>
-        </Row>
-      </dl>
+            <p className="mt-1 text-xs text-muted">用這一宮的天干「{palace.heavenlyStem}」找出四顆對應的星。箭頭指向星所在的宮位；如果指回這一宮，就叫「自化」。</p>
+          </Row>
+          <Row label="夾宮">
+            {flanks.length ? (
+              <ul className="space-y-1 text-sm text-ink-soft">
+                {flanks.map((f) => (
+                  <li key={f.label}>
+                    <span className={`font-medium ${f.tone === "good" ? "text-lu" : f.tone === "bad" ? "text-ji" : ""}`}>{f.label}</span>
+                    ：{f.note}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="text-sm text-muted">—</span>
+            )}
+          </Row>
+          <Row label="神煞">
+            <p className="text-sm text-ink-soft">
+              長生 {palace.changsheng12}・博士 {palace.boshi12}・將前 {palace.jiangqian12}・歲前 {palace.suiqian12}
+            </p>
+          </Row>
+          <Row label="大限">
+            <p className="text-sm text-ink-soft tabular-nums">
+              {palace.decadal.range[0]}–{palace.decadal.range[1]} 歲（{palace.decadal.heavenlyStem}
+              {palace.decadal.earthlyBranch}）
+            </p>
+          </Row>
+          <Row label="小限">
+            <p className="text-sm text-ink-soft tabular-nums">{palace.ages.slice(0, 8).join("、")} 歲…</p>
+          </Row>
+        </dl>
+      </details>
 
       <div className="mt-6 border-t border-line pt-4">
-        <p className="text-xs tracking-[0.2em] text-muted">三方四正</p>
+        <p className="text-xs tracking-[0.2em] text-muted">一起參考的三個宮位（三方四正）</p>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {related.map((r) => {
             const p = astrolabe.palaces[r.index];

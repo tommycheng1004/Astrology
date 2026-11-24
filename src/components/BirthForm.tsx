@@ -277,7 +277,7 @@ export default function BirthForm({
               </div>
             ) : timeMode === "unknown" ? (
               <p className="rounded-lg bg-surface-2/60 px-3.5 py-3 text-sm leading-relaxed text-ink-soft">
-                時辰決定命宮，沒有時辰就排不出命盤。送出後會列出每個時辰的命宮主星與個性，挑最像你的那一個；之後也可以再請家人確認出生時間。
+                送出後可選兩個時辰，比對命宮主星、身宮和生年四化，也可以逐張查看命盤。
               </p>
             ) : (
               <Select
@@ -353,7 +353,7 @@ export default function BirthForm({
             </p>
             {preview.alt?.reason === "boundary" && (
               <p className="mt-1.5">
-                這個時間離{slotName(preview.alt.timeIndex)}只差 {Math.max(1, preview.alt.minutes)} 分鐘。
+                {preview.alt.minutes === 0 ? "這個時間就在時辰交界。" : `這個時間離時辰交界只有 ${preview.alt.minutes} 分鐘。`}
                 {canCompare
                   ? `出生時間若是估的，排盤後可以切換到${slotName(preview.alt.timeIndex)}的命盤比對看看。`
                   : `出生時間若是估的，請先確認時辰，${slotName(preview.alt.timeIndex)}的合盤結果會不一樣。`}

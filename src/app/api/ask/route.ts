@@ -1,10 +1,11 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { ApiError, FinishReason, GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
-import { AI_PROMPT_VERSION, AI_SUGGESTIONS, AI_SYSTEM_PROMPT } from "@/lib/aiPrompt";
+import { AI_PROMPT_VERSION, AI_SUGGESTIONS, AI_SYSTEM_PROMPT, suggestionFacts } from "@/lib/aiPrompt";
 import { buildChart } from "@/lib/buildChart";
 import { chartTextWithFacts } from "@/lib/chartText";
 import { checkStructuredAnswer, type VerifiedAnswer } from "@/lib/server/aiVerify";
-import { authConfigured, DAILY_LIMIT, readDocument, refundQuestion, takeQuestion, usageConfigured, verifyIdToken, writeDocuments, type Quota } from "@/lib/server/firebase";
+import { authConfigured, readDocument, refundQuestion, takeQuestion, usageConfigured, verifyIdToken, writeDocuments, type Quota } from "@/lib/server/firebase";
+import { appConfig, memberDailyLimit } from "@/lib/server/members";
 import { parseShareHash, shareHash } from "@/lib/shareLink";
 
 /**
@@ -102,6 +103,9 @@ export async function POST(request: Request) {
   if (process.env.NEXT_PUBLIC_AI_ENABLED !== "1") return new Response("Not Found", { status: 404 });
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return fail(503, "AI 尚未設定，請稍後再試。");
+  // 後台可以即時關閉 AI（例如費用異常時），不必重新部署
+  const config = await appConfig();
+  if (!config.aiEnabled) return fail(503, "AI 問答暫停服務中，請稍後再試。");
 
   const ip = request.headers.get("x-nf-client-connection-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "local";
   if (rateLimited(ip)) return fail(429, "提問太頻繁了，請過幾分鐘再試。");
@@ -140,8 +144,19 @@ export async function POST(request: Request) {
   const suggestion = typeof body.suggestion === "string" && Object.hasOwn(AI_SUGGESTIONS, body.suggestion)
     ? AI_SUGGESTIONS[body.suggestion as keyof typeof AI_SUGGESTIONS]
     : null;
-  const cachePath = usageConfigured && suggestion === turns.at(-1)?.content
-    ? ["aiAnswers", createHmac("sha256", historySecret()).update(JSON.stringify([shareHash(saved), variant, body.suggestion, AI_PROMPT_VERSION, MODEL])).digest("hex")]
+  let evidence: ReturnType<typeof chartTextWithFacts>;
+  try {
+    evidence = chartTextWithFacts(await buildChart(saved, variant, "share"));
+  } catch {
+    return fail(400, "無法排出命盤，請確認生辰資料。");
+  }
+
+  const question = turns.at(-1)!.content;
+  const focus = suggestionFacts(question, evidence.facts);
+  const isSuggestion = suggestion === question;
+  // 只共用獨立的建議題。追問需要保留這段對話，且不應把使用者補充的近況存入共用快取。
+  const cachePath = usageConfigured && isSuggestion && turns.length === 1
+    ? ["aiAnswers", createHmac("sha256", historySecret()).update(JSON.stringify([shareHash(saved), variant, body.suggestion, AI_PROMPT_VERSION, MODEL, evidence.period, evidence.facts])).digest("hex")]
     : null;
 
   const responseHeaders = { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" };
@@ -151,6 +166,10 @@ export async function POST(request: Request) {
       { done: true, stop: "end_turn", facts: reply.facts, filtered: reply.filtered, quota: quotaInfo,
         sig: signHistory(birth, variant, [...turns!, { role: "assistant", content: reply.answer }]) },
     ];
+  }
+  if (focus?.length === 0) {
+    const answer = "這張命盤目前沒有可用的運限資料，無法從盤上判斷這段時間的重點。你仍可以問工作方式或感情相處，我會從本命盤說明。";
+    return new Response(events({ answer, facts: [], filtered: false }).map((event) => JSON.stringify(event) + "\n").join(""), { headers: responseHeaders });
   }
   type CacheRecord = VerifiedAnswer | { job: string; startedAt: number };
   let cacheVersion: string | false = false;
@@ -169,13 +188,6 @@ export async function POST(request: Request) {
     }
   }
 
-  let evidence: ReturnType<typeof chartTextWithFacts>;
-  try {
-    evidence = chartTextWithFacts(await buildChart(saved, variant, "share"));
-  } catch {
-    return fail(400, "無法排出命盤，請確認生辰資料。");
-  }
-
   let lease: string | null = null;
   if (cachePath) {
     try {
@@ -189,9 +201,10 @@ export async function POST(request: Request) {
 
   // 每日題數：內容都檢查過才扣，格式錯誤的請求不算一題
   let quota: Quota | null = null;
-  if (usageConfigured && !cachePath) {
+  if (usageConfigured && !isSuggestion) {
     try {
-      const taken = await takeQuestion(uid ? { uid } : { ip }, historySecret());
+      const limit = uid ? ((await memberDailyLimit(uid)) ?? config.dailyMember) : config.dailyGuest;
+      const taken = await takeQuestion(uid ? { uid } : { ip }, historySecret(), limit);
       quota = taken.quota;
       if (!taken.allowed)
         return Response.json(
@@ -199,9 +212,9 @@ export async function POST(request: Request) {
             error: quota.member
               ? `今天的 ${quota.limit} 題已經問完了，明天（台灣時間 0 點）再來。`
               : unverified
-                ? `今天的 ${quota.limit} 題免費提問已經用完。完成 Email 驗證後，每天可以問 ${DAILY_LIMIT.member} 題。`
-                : `今天的 ${quota.limit} 題免費提問已經用完。登入會員每天可以問 ${DAILY_LIMIT.member} 題。`,
-            quota: { member: quota.member, limit: quota.limit, remaining: 0, memberLimit: DAILY_LIMIT.member },
+                ? `今天的 ${quota.limit} 題免費提問已經用完。完成 Email 驗證後，每天可以問 ${config.dailyMember} 題。`
+                : `今天的 ${quota.limit} 題免費提問已經用完。登入會員每天可以問 ${config.dailyMember} 題。`,
+            quota: { member: quota.member, limit: quota.limit, remaining: 0, memberLimit: config.dailyMember },
           },
           { status: 429 },
         );
@@ -211,7 +224,7 @@ export async function POST(request: Request) {
     }
   }
   const quotaInfo = quota
-    ? { member: quota.member, limit: quota.limit, remaining: Math.max(0, quota.limit - quota.used), memberLimit: DAILY_LIMIT.member }
+    ? { member: quota.member, limit: quota.limit, remaining: Math.max(0, quota.limit - quota.used), memberLimit: config.dailyMember }
     : undefined;
 
   // GEMINI_BASE_URL 只給本機測試指向模擬伺服器用，正式環境不要設定
@@ -232,12 +245,12 @@ export async function POST(request: Request) {
             console.info("[ask] generating answer", { suggestion: !!cachePath, attempt });
             const result = await ai.models.generateContent({
               model: MODEL,
-              contents: (cachePath ? turns.slice(-1) : turns).map((t) => ({
+              contents: turns.map((t) => ({
                 role: t.role === "assistant" ? "model" : "user",
                 parts: [{ text: t.role === "user" ? wrapQuestion(t.content) : t.content }],
               })),
               config: {
-                systemInstruction: `${AI_SYSTEM_PROMPT}\n\n命盤資料：\n${evidence.text}${retry}`,
+                systemInstruction: `${AI_SYSTEM_PROMPT}\n\n命盤資料：\n${evidence.text}${focus ? `\n本題第一條依據請選自 ${focus.map((f) => f.id).join("、")}。` : ""}${retry}`,
                 maxOutputTokens: 3000,
                 thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
                 abortSignal: AbortSignal.any([abort.signal, AbortSignal.timeout(14_000)]),
@@ -248,10 +261,16 @@ export async function POST(request: Request) {
                   required: ["answer", "factIds"],
                 },
               },
+            }).catch((error: unknown) => {
+              if (attempt === 0 && !abort.signal.aborted && error instanceof ApiError && [502, 503, 504].includes(error.status)) {
+                return null;
+              }
+              throw error;
             });
+            if (!result) continue;
             const finish = result.candidates?.[0]?.finishReason;
             if (finish === FinishReason.SAFETY || finish === FinishReason.PROHIBITED_CONTENT) break;
-            const checked = checkStructuredAnswer(clean(result.text ?? ""), evidence);
+            const checked = checkStructuredAnswer(clean(result.text ?? ""), evidence, focus);
             checked.result.answer = clean(checked.result.answer);
             if (checked.result.answer.length > MAX_ANSWER) checked.errors.push("回答過長");
             if (!checked.errors.length) {
@@ -284,8 +303,8 @@ export async function POST(request: Request) {
           }
         } catch (error) {
           if (!abort.signal.aborted) {
-            console.error("[ask]", (error as Error).name);
             const status = error instanceof ApiError ? error.status : 0;
+            console.error("[ask]", (error as Error).name, { status });
             // 免費方案的每日額度（錯誤內容含 PerDay）在美西時間午夜重置
             const daily = status === 429 && /PerDay/i.test(String((error as Error).message));
             send(controller, {

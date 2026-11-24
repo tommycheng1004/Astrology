@@ -44,8 +44,21 @@ async function publicKey(kid: string | undefined) {
   return key;
 }
 
-/** 驗證登入憑證，成功回傳 uid 與 Email 是否已驗證；憑證無效回傳 null */
-export async function verifyIdToken(token: string): Promise<{ uid: string; verified: boolean } | null> {
+export type Identity = {
+  uid: string;
+  /** Email 是否已驗證（Google 帳號一律已驗證） */
+  verified: boolean;
+  /** 小寫的 Email；沒有 Email 的帳號是空字串 */
+  email: string;
+  name: string;
+  /** 登入方式，例如 google.com、password */
+  provider: string;
+  /** 最近一次真正輸入帳密／選帳號登入的時間（毫秒），後台的敏感操作用來要求近期登入 */
+  authTime: number;
+};
+
+/** 驗證登入憑證，成功回傳身分；憑證無效回傳 null */
+export async function verifyIdToken(token: string): Promise<Identity | null> {
   if (!PROJECT_ID) return null;
   const issuer = `https://securetoken.google.com/${PROJECT_ID}`;
   let payload: JWTPayload;
@@ -62,7 +75,15 @@ export async function verifyIdToken(token: string): Promise<{ uid: string; verif
   }
   const authTime = payload.auth_time;
   if (typeof payload.sub !== "string" || !payload.sub || typeof authTime !== "number" || authTime * 1000 > Date.now() + 60_000) return null;
-  return { uid: payload.sub, verified: payload.email_verified === true };
+  const firebase = payload.firebase as { sign_in_provider?: unknown } | undefined;
+  return {
+    uid: payload.sub,
+    verified: payload.email_verified === true,
+    email: typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "",
+    name: typeof payload.name === "string" ? payload.name.slice(0, 60) : "",
+    provider: typeof firebase?.sign_in_provider === "string" ? firebase.sign_in_provider : "",
+    authTime: authTime * 1000,
+  };
 }
 
 // ---------- Firestore REST（以服務帳戶身分） ----------
@@ -93,14 +114,29 @@ async function accessToken() {
   return token.value;
 }
 
-const documentsPath = () => `projects/${PROJECT_ID}/databases/(default)/documents`;
+export const documentsPath = () => `projects/${PROJECT_ID}/databases/(default)/documents`;
 const apiBase = () => (isLocal(FIRESTORE_EMULATOR) ? `http://${FIRESTORE_EMULATOR}/v1` : "https://firestore.googleapis.com/v1");
+
+/**
+ * 以服務帳戶呼叫 Firestore REST。suffix 接在 documents 路徑後面，例如 ":commit"、"/members/abc"、":runQuery"。
+ * 回傳 Response，由呼叫端判斷狀態碼。
+ */
+export async function firestoreFetch(suffix: string, body?: unknown) {
+  return fetch(`${apiBase()}/${documentsPath()}${suffix}`, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { Authorization: `Bearer ${await accessToken()}`, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    cache: "no-store",
+  });
+}
 
 /**
  * 原子性地把 usage/{id} 的 count 加上 delta，回傳加完後的值。文件不存在時自動建立。
  * expireAt 給 Firestore 的 TTL 政策自動清除舊紀錄用。
+ * 同一筆交易也累加 stats/{日期} 的每日題數（後台儀表板用，不含個人資料、不會過期）。
  */
 async function addUsage(id: string, delta: number, expireAt: Date) {
+  const [date, kind] = id.split("_");
   const res = await fetch(`${apiBase()}/${documentsPath()}:commit`, {
     method: "POST",
     headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
@@ -110,6 +146,12 @@ async function addUsage(id: string, delta: number, expireAt: Date) {
           update: { name: `${documentsPath()}/usage/${id}`, fields: { expireAt: { timestampValue: expireAt.toISOString() } } },
           updateMask: { fieldPaths: ["expireAt"] },
           updateTransforms: [{ fieldPath: "count", increment: { integerValue: String(delta) } }],
+        },
+        {
+          transform: {
+            document: `${documentsPath()}/stats/${date}`,
+            fieldTransforms: [{ fieldPath: kind === "m" ? "questionsMember" : "questionsGuest", increment: { integerValue: String(delta) } }],
+          },
         },
       ],
     }),
@@ -129,7 +171,7 @@ const intEnv = (name: string, fallback: number) => {
 export const DAILY_LIMIT = { guest: intEnv("AI_DAILY_GUEST", 2), member: intEnv("AI_DAILY_MEMBER", 10) };
 
 /** 台灣日期，例如 2026-11-11；每日題數在台灣時間午夜重置 */
-const taiwanDate = (now = Date.now()) => new Date(now + 8 * 3600_000).toISOString().slice(0, 10);
+export const taiwanDate = (now = Date.now()) => new Date(now + 8 * 3600_000).toISOString().slice(0, 10);
 
 export type Quota = { member: boolean; limit: number; used: number; key: string };
 
@@ -137,9 +179,8 @@ export type Quota = { member: boolean; limit: number; used: number; key: string 
  * 先扣一題再回答：回傳扣完後的用量；超過上限時 allowed 為 false（這一題也已退回）。
  * 訪客以 IP 的雜湊計算（不存原始 IP），會員以 uid 計算。
  */
-export async function takeQuestion(who: { uid: string } | { ip: string }, secret: string) {
+export async function takeQuestion(who: { uid: string } | { ip: string }, secret: string, limit: number) {
   const member = "uid" in who;
-  const limit = member ? DAILY_LIMIT.member : DAILY_LIMIT.guest;
   const date = taiwanDate();
   const subject = member ? who.uid : createHmac("sha256", secret).update(`ip:${who.ip}`).digest("base64url").slice(0, 32);
   const key = `${date}_${member ? "m" : "g"}_${subject}`;

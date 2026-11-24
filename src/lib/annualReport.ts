@@ -19,8 +19,8 @@ export function monthReport(astrolabe: Astrolabe, date: string, end = date) {
   const best = list[0];
   const watch = list[list.length - 1];
   return {
-    best: { label: best.label, level: best.level, insight: best.insights.find((i) => i.tone === "good")?.text ?? best.insights[0]?.text },
-    watch: { label: watch.label, level: watch.level, insight: watch.insights.find((i) => i.tone === "bad")?.text ?? watch.insights[0]?.text },
+    best: { label: best.label, level: best.level, summary: best.summary, insight: best.insights.find((i) => i.tone === "good")?.text ?? best.insights[0]?.text },
+    watch: { label: watch.label, level: watch.level, summary: watch.summary, insight: watch.insights.find((i) => i.tone === "bad")?.text ?? watch.insights[0]?.text },
   };
 }
 
@@ -50,7 +50,7 @@ export function annualReport(astrolabe: Astrolabe) {
   const scores = dateScores(astrolabe, span, from);
   return {
     ...preview,
-    aspects: analyzeLayer(astrolabe, horoscope, "yearly", false, ALL_ASPECTS).map(({ label, level, score }) => ({ label, level, score })),
+    aspects: analyzeLayer(astrolabe, horoscope, "yearly", false, ALL_ASPECTS).map(({ label, level, score, summary }) => ({ label, level, score, summary })),
     months: monthsOf(astrolabe, REPORT_YEAR).map((month) => ({
       label: month.label,
       range: month.solarRangeFull,

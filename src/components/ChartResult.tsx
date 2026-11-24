@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import BoundaryComparison from "@/components/BoundaryComparison";
 import ChartHighlights from "@/components/ChartHighlights";
 import ChartShare from "@/components/ChartShare";
 import ChartReports from "@/components/ChartReports";
@@ -144,9 +145,9 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
         </h1>
         <div className="flex max-w-full flex-wrap items-center gap-x-1">
           {isSaved ? (
-            <span role="status" className="px-2 text-xs font-medium text-ink-soft">已存到我的命盤</span>
+            <span role="status" className="px-2 text-xs font-medium text-ink-soft">{chart.variant === "alt" ? "已儲存原始生辰" : "已存到我的命盤"}</span>
           ) : (
-            <button type="button" className="action-primary" onClick={onSave}>存到我的命盤</button>
+            <button type="button" className="action-primary" onClick={onSave}>{chart.variant === "alt" ? "儲存原始生辰" : "存到我的命盤"}</button>
           )}
           <ChartShare chart={chart} />
         </div>
@@ -162,6 +163,7 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
       </div>
 
       <div hidden={view !== "chart"} className="mt-4 space-y-5 md:mt-1 sm:space-y-6">
+        {chart.resolved.alt && <BoundaryComparison chart={chart} alt={chart.resolved.alt} loading={loading} onSwitch={onSwitchVariant} />}
         {chartFirst && board}
         <ChartHighlights chart={chart} onToday={showToday} />
         {!chartFirst && board}
@@ -181,7 +183,6 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
             </div>
           </div>
         </details>
-        {chart.resolved.alt && <BoundaryNotice chart={chart} loading={loading} onSwitch={onSwitchVariant} />}
         <details
           className="rounded-xl border border-line-strong px-3 sm:px-5"
           onToggle={(event) => { if (event.currentTarget.open) setDetailsSeen(true); }}
@@ -262,46 +263,6 @@ function birthLine(chart: Chart) {
   const date = formatBirthSummary(input).replace(/ \S+時$/, "");
   const time = saved.timeMode === "clock" ? saved.clock : TIME_SLOTS[input.timeIndex].label;
   return [`${date}（${rocYear(input.year)}年）${time}`, place && place.id !== "other" ? place.name : null, input.gender].filter(Boolean).join("・");
-}
-
-/** 出生時間離時辰交界很近：提醒並可切換到相鄰時辰的命盤比對 */
-function BoundaryNotice({ chart, loading, onSwitch }: { chart: Chart; loading: boolean; onSwitch: () => void }) {
-  const alt = chart.resolved.alt!;
-  const mainSlot = slotName(chart.resolved.timeIndex);
-  const altSlot = slotName(alt.timeIndex);
-  const isAlt = chart.variant === "alt";
-  return (
-    <div
-      role="note"
-      className={`mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border px-4 py-3 text-sm leading-relaxed ${
-        isAlt ? "border-accent/50 bg-accent-soft text-ink" : "border-gold/40 bg-gold/10 text-ink-soft"
-      }`}
-    >
-      <p className="max-w-[42em]">
-        {isAlt ? (
-          <>
-            目前顯示的是<strong className="font-bold text-accent">{alt.reason === "dst" ? "另一種解釋" : "相鄰"}的{altSlot}</strong>
-            命盤，供比對用；原本的解釋屬{mainSlot}。
-          </>
-        ) : (
-          <>
-            {alt.reason === "dst"
-              ? `出生當天剛好切換夏令時間，這個鐘點有兩種解釋，分屬${mainSlot}與${altSlot}。`
-              : `出生時間離${altSlot}只差 ${Math.max(1, alt.minutes)} 分鐘。若時間是估的，`}
-            可以兩個時辰都看看，哪一張的個性與經歷更像你，通常就是正確的時辰。
-          </>
-        )}
-      </p>
-      <button
-        type="button"
-        disabled={loading}
-        onClick={onSwitch}
-        className="h-11 shrink-0 rounded-lg border border-accent bg-surface px-4 font-medium text-accent transition hover:bg-accent hover:text-surface disabled:opacity-60"
-      >
-        {isAlt ? `回到${mainSlot}命盤` : `改看${altSlot}命盤`}
-      </button>
-    </div>
-  );
 }
 
 function ViewTab({ active, onClick, title, sub }: { active: boolean; onClick: () => void; title: string; sub: string }) {

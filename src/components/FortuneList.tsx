@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import GlossText from "@/components/GlossText";
+import { glossParts, type GlossPart } from "@/content/glossary";
 import { overallOf, type Grade, type Insight, type Reading } from "@/lib/fortune";
 
 /** 等級配色：好的偏綠、普通中性、差的偏橘紅；一律搭配文字，不單靠顏色 */
@@ -37,10 +39,10 @@ export function headlineOf(results: Reading[], kind: "natal" | "period") {
   const worst = sorted[sorted.length - 1];
   const overall = OVERALL_PHRASE[overallOf(results).grade];
   if (best.score - worst.score < 12)
-    return kind === "natal" ? "五運發展平均，沒有特別突出或吃虧的地方。" : `${overall}，五運起伏不大。`;
+    return kind === "natal" ? "工作、金錢、感情、健康和人際這五個面向，在這張盤上的評分相近。" : `${overall}，這段期間五個生活面向的評分相近。`;
   return kind === "natal"
-    ? `${SHORT[best.key]}是你的強項，${SHORT[worst.key]}比較需要用心經營。`
-    : `${overall}，${best.label}最旺，${worst.label}要多留意。`;
+    ? `${SHORT[best.key]}是這張盤評分較高的面向，${SHORT[worst.key]}比較需要用心經營。`
+    : `${overall}，${best.label}相對順利，${worst.label}要多留意。`;
 }
 
 type Props = {
@@ -101,8 +103,8 @@ export default function FortuneList({ results, onSelectPalace, palaceVerb = "" }
               {expanded && (
                 <div id={`fortune-${r.key}`} className="border-t border-line/60 bg-paper/40 px-5 pt-4 pb-5 sm:px-6">
                   <ul className="max-w-[42em] space-y-3">
-                    {r.insights.map((insight, i) => (
-                      <InsightItem key={i} insight={insight} />
+                    {glossParts(r.insights.map((x) => x.text)).map((parts, i) => (
+                      <InsightItem key={i} insight={r.insights[i]} parts={parts} />
                     ))}
                   </ul>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
@@ -113,7 +115,7 @@ export default function FortuneList({ results, onSelectPalace, palaceVerb = "" }
                     >
                       在命盤上看{palaceVerb}{r.palaceLabel.split("・")[0]}
                     </button>
-                    <span className="text-xs text-muted tabular-nums">指數 {r.score}</span>
+                    <span className="text-xs text-muted tabular-nums">本站評分 {r.score}／100</span>
                   </div>
                   {r.key === "health" && (
                     <p className="mt-3 text-xs text-muted">健康分析僅為命理參考，身體不適請諮詢專業醫師。</p>
@@ -134,7 +136,7 @@ const TONE_MARK: Record<Insight["tone"], { symbol: string; label: string; classN
   neutral: { symbol: "●", label: "說明", className: "text-[7px] text-muted" },
 };
 
-function InsightItem({ insight }: { insight: Insight }) {
+function InsightItem({ insight, parts }: { insight: Insight; parts: GlossPart[] }) {
   const mark = TONE_MARK[insight.tone];
   return (
     <li className="grid grid-cols-[1rem_1fr] items-baseline gap-1.5 text-base leading-[1.8] text-ink-soft">
@@ -142,7 +144,7 @@ function InsightItem({ insight }: { insight: Insight }) {
         <span aria-hidden>{mark.symbol}</span>
         <span className="sr-only">{mark.label}：</span>
       </span>
-      <span>{insight.text}</span>
+      <span><GlossText parts={parts} /></span>
     </li>
   );
 }

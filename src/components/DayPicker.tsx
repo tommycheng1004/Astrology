@@ -61,7 +61,7 @@ export default function DayPicker({ astrolabe, onSelectPalace, savedCharts = [],
           紫微擇日
         </h2>
         <p className="mt-1 max-w-[40em] text-[15px] text-ink-soft">
-          依你的命盤與每天的流日，挑出最適合做這件事的日子，並附上當天最好的時辰；農民曆的沖煞與歲破、月破也一併避開。
+          先選要辦的事和日期範圍。系統會用你的命盤比較這幾天，列出相對適合的日期和時段，再依這件事的農民曆習俗篩選。
         </p>
 
         <fieldset className="mt-5">
@@ -170,7 +170,7 @@ export default function DayPicker({ astrolabe, onSelectPalace, savedCharts = [],
         </p>
       )}
       <DayList
-        title={`最適合「${result.purpose.label}」的日子`}
+        title={`較適合「${result.purpose.label}」的日子`}
         days={result.best}
         open={open}
         onToggle={setOpen}
@@ -246,7 +246,7 @@ function DayListBody({
                 <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold ${GRADE_BADGE[d.grade]}`}>{d.grade}</span>
                 {d.bestHours.length > 0 && (
                   <span className="col-span-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft sm:col-start-2">
-                    <span className="text-muted">最佳時辰</span>
+                    <span className="text-muted">建議時段</span>
                     {d.bestHours.map((h) => (
                       <span key={h.hour} className="rounded-md bg-accent-soft px-2 py-0.5 font-serif font-medium text-accent">
                         {h.label}
@@ -255,10 +255,11 @@ function DayListBody({
                     ))}
                   </span>
                 )}
-                {d.reason && <span className="col-span-3 text-[15px] leading-relaxed text-ink-soft sm:col-start-2">{d.reason}</span>}
+                {d.results[0] && <span className="col-span-3 text-[15px] leading-relaxed text-ink-soft sm:col-start-2">{d.results[0].label} · {d.results[0].summary}</span>}
               </button>
               {expanded && (
                 <div className="border-t border-line/60 bg-paper/40 p-4 sm:p-5">
+                  {d.reason && <p className="mb-3 text-sm text-ink-soft">盤面依據 · {d.reason}</p>}
                   <p className="mb-2 text-sm text-muted">這天和這件事有關的宮位</p>
                   <FortuneList results={d.results} onSelectPalace={onSelectPalace} palaceVerb="流日落在的" />
                   <p className="mt-4 mb-2 text-sm text-muted">這天的其他宮位</p>

@@ -7,6 +7,7 @@ import { TAIWAN_CLOCK_SHIFTS } from "@/content/dst";
 import { MUTAGENS, SIHUA, STEMS } from "@/content/sihua";
 import { starByName } from "@/content/stars";
 import { BOUNDARY_MINUTES, longitudeCorrection, PLACES } from "@/lib/birthtime";
+import { shareHash } from "@/lib/shareLink";
 import { articleLd, breadcrumbLd, CONTENT_DATES, pageMetadata } from "@/lib/site";
 
 const TITLE = "紫微斗數排盤方法與準確度說明";
@@ -20,6 +21,11 @@ const CRUMBS = [
   { name: "首頁", path: "/" },
   { name: "排盤說明", path: PATH },
 ];
+
+const NEW_YEAR_EXAMPLE = shareHash({
+  input: { name: "", gender: "女", calendar: "solar", year: 2024, month: 2, day: 9, isLeapMonth: false, timeIndex: 11 },
+  timeMode: "clock", clock: "22:50", place: "taipei", trueSolar: false,
+});
 
 const SOLAR_EXAMPLES = ["taipei", "tainan", "kinmen", "hongkong", "shanghai", "chengdu", "urumqi", "singapore", "tokyo", "losangeles"];
 
@@ -233,9 +239,17 @@ export default function MethodPage() {
 
             <Section id="boundary" title="出生時間剛好在時辰交界怎麼辦？">
               <p>
-                時辰每兩小時一換（23:00、01:00、03:00……）。出生時間離交界在 {BOUNDARY_MINUTES} 分鐘以內時，記錄時間或醫院鐘錶的誤差就可能讓時辰排錯。本站會在排盤結果上方提醒，並可一鍵切換到相鄰時辰的命盤比對。
+                時辰每兩小時一換（23:00、01:00、03:00……）。出生時間離交界在 {BOUNDARY_MINUTES} 分鐘以內時，記錄時間或醫院鐘錶的誤差就可能讓時辰排錯。展開排盤結果上方的「比對兩個時辰的盤面」，可逐項查看兩盤的國曆與農曆日期、命宮地支與主星、身宮、五行局和生年四化。勾選「只看不同項目」即可找出受時間影響的欄位。
               </p>
-              <p>判斷哪一張才是你的命盤（俗稱「定盤」），可以從這幾點對照：</p>
+              <div className="rounded-xl border border-line bg-surface p-4">
+                <h3 className="font-serif font-bold">除夕晚上，差十分鐘會怎樣？</h3>
+                <p className="mt-1">假設出生在台北，紀錄為 2024 年 2 月 9 日 22:50。依本站規則，亥時盤用臘月三十，跨到 23:00 就用正月初一，連生年四化也隨之更換。</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3">
+                  <Link href={`/${NEW_YEAR_EXAMPLE}`} className="action-secondary">打開除夕範例命盤</Link>
+                  <a href="https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T2024c.txt" className="action-text">香港天文台 2024 年曆表</a>
+                </div>
+              </div>
+              <p>實際出生時間請優先核對出生紀錄。如果時辰仍有疑問，可用以下線索輔助傳統定盤。</p>
               <ul className="list-disc space-y-1.5 pl-5">
                 <li>命宮主星描述的個性，哪一張比較像你。</li>
                 <li>兄弟宮、父母宮反映的手足與父母狀況。</li>

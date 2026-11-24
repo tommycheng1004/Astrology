@@ -3,6 +3,7 @@
 // 1. 國曆 → 農曆 → 國曆 往返一致（表單農曆輸入走的就是這條路）
 // 2. 列出與 Intl 中國曆不同的區段，再逐一對照香港天文台曆表（HKO）判斷
 // 執行：npx tsx scripts/verify-lunar.ts
+import assert from "node:assert/strict";
 import { solar2lunar } from "lunar-lite";
 import { solarToLunar } from "../src/lib/lunar";
 import { leapMonthOf, lunarMonthDays, lunarToSolar } from "../src/lib/ziwei";
@@ -71,3 +72,15 @@ console.log(`逐日檢查 ${days} 天`);
 console.log(`${roundTripErrors ? "✗" : "✓"} 國曆→農曆→國曆往返：${roundTripErrors ? `${roundTripErrors} 天不一致` : "全部一致"}`);
 console.log(`${formErrors ? "✗" : "✓"} 表單閏月與大小月：${formErrors ? `${formErrors} 個月份不一致` : "全部一致"}`);
 console.log(`\n與 Intl 中國曆不同的區段（${diffs.length} 段，需對照官方曆表）：\n${diffs.join("\n")}`);
+
+// 固定的外部對照，避免換算與反算同時偏一天仍通過往返測試。
+// https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T2024c.txt
+// https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T2027c.txt
+for (const [y, m, d, lunarYear, lunarMonth, lunarDay] of [
+  [2024, 2, 9, 2023, 12, 30], [2024, 2, 10, 2024, 1, 1],
+  [2027, 2, 5, 2026, 12, 29], [2027, 2, 6, 2027, 1, 1],
+]) {
+  assert.deepEqual(solarToLunar(y, m, d), { lunarYear, lunarMonth, lunarDay, isLeap: false }, `天文台曆表 ${y}-${m}-${d}`);
+}
+console.log("✓ 香港天文台 2024、2027 年除夕與正月初一相符");
+if (tableErrors || roundTripErrors || formErrors) process.exitCode = 1;
