@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { calendarDate, calendarPath, tokenPath, type CalendarSettings } from "@/lib/server/calendar";
-import { privateJson, readDocument, requestMember, usageConfigured, writeDocuments } from "@/lib/server/firebase";
+import { notConfigured, privateJson, readDocument, requestMember, usageConfigured, writeDocuments } from "@/lib/server/firebase";
 import { parseShareHash, shareHash } from "@/lib/shareLink";
 
 export async function GET(request: Request) {
   const member = await requestMember(request);
   if (!member) return privateJson({ error: "請先登入會員。" }, 401);
-  if (!usageConfigured) return privateJson({ error: "行事曆暫時無法使用。" }, 503);
+  if (!usageConfigured) return notConfigured("行事曆");
   const config = await readDocument<CalendarSettings>(calendarPath(member.uid));
   return privateJson({ token: config?.data.token, dates: config?.data.dates ?? [], hasChart: !!config?.data.chart });
 }
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const member = await requestMember(request);
   if (!member) return privateJson({ error: "請先登入會員。" }, 401);
-  if (!usageConfigured) return privateJson({ error: "行事曆暫時無法使用。" }, 503);
+  if (!usageConfigured) return notConfigured("行事曆");
   const body = await request.json().catch(() => null);
   if (!body || !["reset", "chart", "save", "remove"].includes(body.action)) return privateJson({ error: "行事曆設定有誤。" }, 400);
   const date = calendarDate(body.date);

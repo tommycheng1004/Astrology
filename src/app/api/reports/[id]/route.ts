@@ -1,11 +1,11 @@
 import type { ReportRecord } from "@/lib/annualReport";
-import { privateJson, readDocument, requestMember, usageConfigured } from "@/lib/server/firebase";
+import { notConfigured, privateJson, readDocument, requestMember, usageConfigured } from "@/lib/server/firebase";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const member = await requestMember(request);
   if (!member) return privateJson({ error: "請先登入會員。" }, 401);
   const { id } = await params;
-  if (!usageConfigured) return privateJson({ error: "報告暫時無法使用。" }, 503);
+  if (!usageConfigured) return notConfigured("報告");
   if (!/^[0-9a-f]{64}$/.test(id)) return privateJson({ error: "找不到報告。" }, 404);
   const entry = await readDocument<ReportRecord>(["users", member.uid, "reports", id]);
   if (!entry) return privateJson({ error: "找不到報告。" }, 404);

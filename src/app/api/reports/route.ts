@@ -4,7 +4,7 @@ import { ANNUAL_REPORT, annualPreview, annualReport, monthReport, type ReportDat
 import { buildChart } from "@/lib/buildChart";
 import { chartText } from "@/lib/chartText";
 import { taiwanNow } from "@/lib/chartSummary";
-import { privateJson, readDocument, requestMember, usageConfigured, writeDocuments } from "@/lib/server/firebase";
+import { notConfigured, privateJson, readDocument, requestMember, usageConfigured, writeDocuments } from "@/lib/server/firebase";
 import { reportNarrative } from "@/lib/server/reportNarrative";
 import { parseShareHash, shareHash } from "@/lib/shareLink";
 
@@ -15,7 +15,7 @@ const recoverAfter = 120_000;
 export async function POST(request: Request) {
   const member = await requestMember(request);
   if (!member) return privateJson({ error: "請先登入會員。" }, 401);
-  if (!usageConfigured) return privateJson({ error: "報告暫時無法使用。" }, 503);
+  if (!usageConfigured) return notConfigured("報告");
   const body = await request.json().catch(() => null);
   if (!body || !["annual", "monthly", "deep"].includes(body.kind) || typeof body.birth !== "string" || body.birth.length > 150)
     return privateJson({ error: "報告資料有誤。" }, 400);

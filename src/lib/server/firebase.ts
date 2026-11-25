@@ -209,6 +209,20 @@ export function privateJson(data: unknown, status = 200) {
   return Response.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 
+let missingLogged = false;
+/**
+ * 缺服務帳戶（usageConfigured 為 false）時的回應。詳細原因寫進伺服器紀錄；
+ * 本機 npm run dev 時直接把缺什麼顯示在畫面上，正式環境只給一般說明。
+ */
+export function notConfigured(feature: string) {
+  if (!missingLogged) {
+    missingLogged = true;
+    console.error("[firebase] 缺少 FIREBASE_CLIENT_EMAIL 或 FIREBASE_PRIVATE_KEY：會員報告、行事曆、事件定盤、AI 每日題數與管理後台都無法使用。設定步驟見 docs/firebase-setup.md 第 5 步。");
+  }
+  const hint = process.env.NODE_ENV === "development" ? "（開發提示：伺服器尚未設定 Firebase 服務帳戶 FIREBASE_CLIENT_EMAIL、FIREBASE_PRIVATE_KEY，見 docs/firebase-setup.md 第 5 步。）" : "";
+  return privateJson({ error: `${feature}暫時無法使用。${hint}` }, 503);
+}
+
 const documentName = (path: string[]) => `${documentsPath()}/${path.join("/")}`;
 const documentUrl = (path: string[]) => `${apiBase()}/${documentsPath()}/${path.map(encodeURIComponent).join("/")}`;
 
