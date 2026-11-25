@@ -67,12 +67,12 @@ export async function POST(request: Request) {
       }
       const narrative = withNarrative ? await reportNarrative(report).catch((error) => {
         if (kind === "deep") throw error;
-        console.error("[reports] AI narrative failed", (error as Error).name);
+        console.error("[reports] AI narrative failed", (error as Error).name, { status: (error as { status?: number }).status });
         return null;
       }) : null;
       final = { status: "ready", report, narrative };
     } catch (error) {
-      console.error("[reports] generation failed", (error as Error).name);
+      console.error("[reports] generation failed", (error as Error).name, { kind, status: (error as { status?: number }).status });
       final = ready ?? { status: "failed", startedAt: pending.startedAt };
     }
     const latest = await readDocument<Stored>(path);

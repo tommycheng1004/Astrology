@@ -3,6 +3,7 @@ import { ApiError, FinishReason, GoogleGenAI, ThinkingLevel, Type } from "@googl
 import { AI_PROMPT_VERSION, AI_SUGGESTIONS, AI_SYSTEM_PROMPT, suggestionFacts } from "@/lib/aiPrompt";
 import { buildChart } from "@/lib/buildChart";
 import { chartTextWithFacts } from "@/lib/chartText";
+import { generateWithFallback, PRIMARY_MODEL as MODEL } from "@/lib/server/aiModels";
 import { checkStructuredAnswer, type VerifiedAnswer } from "@/lib/server/aiVerify";
 import { authConfigured, readDocument, refundQuestion, takeQuestion, usageConfigured, verifyIdToken, writeDocuments, type Quota } from "@/lib/server/firebase";
 import { appConfig, memberDailyLimit } from "@/lib/server/members";
@@ -26,7 +27,6 @@ import { parseShareHash, shareHash } from "@/lib/shareLink";
  */
 
 /** 預設 Gemini 3.5 Flash-Lite（穩定版、價格低）；要更好的品質可改 gemini-3.8-flash */
-const MODEL = process.env.AI_MODEL || "gemini-3.5-flash-lite";
 const MAX_TURNS = 10;
 const MAX_QUESTION = 300;
 const MAX_ANSWER = 12000;
@@ -241,10 +241,13 @@ export async function POST(request: Request) {
         try {
           let reply: VerifiedAnswer | null = null;
           let retry = "";
+          // Netlify 伺服器函式最多 60 秒；忙碌重試、換模型與答案檢查後重寫，都要在這之內完成
+          const deadline = Date.now() + 45_000;
           for (let attempt = 0; attempt < 2; attempt++) {
+            // 檢查後重寫需要足夠時間，不夠就不重寫
+            if (attempt > 0 && deadline - Date.now() < 15_000) break;
             console.info("[ask] generating answer", { suggestion: !!cachePath, attempt });
-            const result = await ai.models.generateContent({
-              model: MODEL,
+            const { result } = await generateWithFallback(ai, {
               contents: turns.map((t) => ({
                 role: t.role === "assistant" ? "model" : "user",
                 parts: [{ text: t.role === "user" ? wrapQuestion(t.content) : t.content }],
@@ -253,7 +256,6 @@ export async function POST(request: Request) {
                 systemInstruction: `${AI_SYSTEM_PROMPT}\n\n命盤資料：\n${evidence.text}${focus ? `\n本題第一條依據請選自 ${focus.map((f) => f.id).join("、")}。` : ""}${retry}`,
                 maxOutputTokens: 3000,
                 thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-                abortSignal: AbortSignal.any([abort.signal, AbortSignal.timeout(14_000)]),
                 responseMimeType: "application/json",
                 responseSchema: {
                   type: Type.OBJECT,
@@ -261,13 +263,7 @@ export async function POST(request: Request) {
                   required: ["answer", "factIds"],
                 },
               },
-            }).catch((error: unknown) => {
-              if (attempt === 0 && !abort.signal.aborted && error instanceof ApiError && [502, 503, 504].includes(error.status)) {
-                return null;
-              }
-              throw error;
-            });
-            if (!result) continue;
+            }, { deadline, perAttempt: 14_000, signal: abort.signal, label: "ask" });
             const finish = result.candidates?.[0]?.finishReason;
             if (finish === FinishReason.SAFETY || finish === FinishReason.PROHIBITED_CONTENT) break;
             const checked = checkStructuredAnswer(clean(result.text ?? ""), evidence, focus);

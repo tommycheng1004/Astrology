@@ -42,7 +42,7 @@
 | `NEXT_PUBLIC_CONTACT_EMAIL` | 隱私權政策頁的聯絡信箱。有會員資料後**建議設定**，使用者才知道怎麼申請刪除帳號 |
 | `AI_DAILY_GUEST`、`AI_DAILY_MEMBER` | 每日題數，預設 2 與 10 |
 | `AI_MODEL` | AI 模型，預設見 `.env.example` |
-| `AI_DEEP_MODEL` | 深度解盤專用模型（選填） |
+| `AI_FALLBACK_MODELS` | 備援模型，逗號分隔（選填，預設見 `.env.example`）。主要模型忙碌或額度用完時依序改用 |
 
 **不要設定**：`NEXT_PUBLIC_FIREBASE_EMULATOR`、`FIREBASE_AUTH_EMULATOR_HOST`、`FIRESTORE_EMULATOR_HOST`、`GEMINI_BASE_URL`（這些只給本機測試用）。
 
