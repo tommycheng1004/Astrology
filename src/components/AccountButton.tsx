@@ -23,6 +23,7 @@ import {
   subscribeAccount,
   type AccountUser,
 } from "@/lib/account";
+import { track } from "@/lib/analytics";
 import { AI_ENABLED } from "@/lib/site";
 
 const noSubscribe = () => () => {};
@@ -58,6 +59,7 @@ export default function AccountButton() {
   if (!account.enabled) return null;
 
   function openDialog() {
+    track("login_open");
     setError(null);
     setNotice(null);
     setMode("signin");

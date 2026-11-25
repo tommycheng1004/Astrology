@@ -25,6 +25,10 @@ Google 登入與 Email 註冊、「我的命盤」雲端同步、AI 每日題數
 - 伺服器不用 firebase-admin：`src/lib/server/firebase.ts` 以 jose 驗證 ID token、以 Firestore REST API 儲存會員功能資料、AI 快取與每日題數。
   伺服器程式不可 import `firebase` 套件（它帶的 `@grpc/grpc-js` 有伺服器端漏洞公告，前端用不到）。
 
+## 流量分析（GA4）
+
+設定 `NEXT_PUBLIC_GA_ID` 才會載入。事件清單、隱私原則（不送生辰、去掉網址 `#` 之後的內容）與 GA 後台必要設定見 [docs/analytics.md](docs/analytics.md)。
+
 ## 管理後台
 
 `/admin`：營運總覽、會員查詢與個人題數、AI 開關與每日題數、稽核紀錄、後台人員角色。擁有者由環境變數 `ADMIN_OWNER_EMAILS` 指定。設計與設定見 [docs/admin.md](docs/admin.md)。

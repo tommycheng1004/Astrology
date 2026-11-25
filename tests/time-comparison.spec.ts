@@ -17,7 +17,7 @@ test("不知道時辰時可選兩盤、篩選差異並開啟指定命盤", async
   expect(await compare.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
   await compare.getByRole("button", { name: "查看巳時命盤" }).click();
   await expect(page.getByRole("heading", { name: "你的命盤" })).toBeVisible();
-  await page.getByText("生辰與顯示偏好", { exact: true }).click();
+  await page.getByText("生辰資料與顯示偏好", { exact: true }).click();
   await expect(page.getByText(/民國79年.*巳時/)).toBeVisible();
 });
 

@@ -7,6 +7,7 @@ import { AI_SUGGESTIONS } from "@/lib/aiPrompt";
 import type { Fact } from "@/lib/chartFacts";
 import type { Chart } from "@/lib/buildChart";
 import { shareHash } from "@/lib/shareLink";
+import { track } from "@/lib/analytics";
 
 /**
  * AI 問答。命盤由伺服器依生辰重新排出後交給 AI；傳出去的只有出生日期、時間、性別與出生地，不含姓名。
@@ -108,6 +109,7 @@ export default function AiChat({ chart }: { chart: Chart }) {
     stickRef.current = true;
     const history: Turn[] = [...turns, { role: "user", content: q }];
     setTurns(history);
+    track("ai_question", { suggested: !!suggestion });
     setDraft("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     setError(null);

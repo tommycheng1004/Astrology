@@ -1,5 +1,6 @@
 import type { FirebaseApp } from "firebase/app";
 import type { Auth, User } from "firebase/auth";
+import { track } from "@/lib/analytics";
 import { FIREBASE_CONFIG, FIREBASE_EMULATOR, FIREBASE_ENABLED } from "@/lib/firebaseConfig";
 import { clearCharts } from "@/lib/savedCharts";
 
@@ -162,7 +163,8 @@ export async function signInWithGoogle(): Promise<string | null> {
   try {
     const provider = new mod.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
-    await mod.signInWithPopup(auth, provider);
+    const result = await mod.signInWithPopup(auth, provider);
+    track(mod.getAdditionalUserInfo(result)?.isNewUser ? "sign_up" : "login", { method: "google" });
     return null;
   } catch (e) {
     const code = (e as { code?: string }).code ?? "";
@@ -216,6 +218,7 @@ export async function signUpWithEmail(name: string, email: string, password: str
     if (name.trim()) await mod.updateProfile(user, { displayName: name.trim().slice(0, 20) });
     await mod.sendEmailVerification(user, continueUrl()).catch((e) => console.warn("驗證信寄送失敗", e));
     set({ user: toAccountUser(user) });
+    track("sign_up", { method: "email" });
     return null;
   } catch (e) {
     return authMessage(e);
@@ -226,6 +229,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
   const { auth, mod } = await loadAccount();
   try {
     await mod.signInWithEmailAndPassword(auth, email.trim(), password);
+    track("login", { method: "email" });
     return null;
   } catch (e) {
     return authMessage(e);

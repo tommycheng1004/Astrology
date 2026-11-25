@@ -10,6 +10,7 @@ import { ANNUAL_REPORT, type ReportKind } from "@/lib/annualReport";
 import { memberFetch } from "@/lib/memberFetch";
 import { shareHash } from "@/lib/shareLink";
 import { AI_ENABLED } from "@/lib/site";
+import { track } from "@/lib/analytics";
 
 export default function ReportLauncher({ saved, variant = "main", kind, children, className = "action-primary", disabled = false }: {
   saved: SavedBirth;
@@ -64,6 +65,7 @@ export default function ReportLauncher({ saved, variant = "main", kind, children
   }, [uid]);
 
   function start() {
+    track("report_start", { report: kind, signed_in: !!uid });
     if (!uid) {
       pendingLogin.current = true;
       openAccountDialog();

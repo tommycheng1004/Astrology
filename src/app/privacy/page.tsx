@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Breadcrumbs } from "@/components/SiteChrome";
+import { GA_ID } from "@/lib/analytics";
 import { FIREBASE_ENABLED } from "@/lib/firebaseConfig";
 import { AI_ENABLED, CONTACT_EMAIL, pageMetadata, SITE_NAME } from "@/lib/site";
 
@@ -8,7 +9,7 @@ const TITLE = "隱私權政策";
 const DESCRIPTION = `${SITE_NAME}如何處理你的生辰資料：排盤在瀏覽器中計算、「我的命盤」存在哪裡、登入會員與使用 AI 問答時會送出哪些資料。`;
 const PATH = "/privacy";
 /** 政策內容修改時請一併更新 */
-const UPDATED = "2026-11-11";
+const UPDATED = "2026-11-25";
 
 /** 開頭的摘要：依有沒有開啟會員與 AI 問答，說明生辰什麼時候會離開你的瀏覽器 */
 const SENDS = [FIREBASE_ENABLED && "登入會員同步命盤", AI_ENABLED && "使用「問 AI」"].filter(Boolean).join("或");
@@ -104,6 +105,26 @@ export default function PrivacyPage() {
           <Section title="會員報告、行事曆與事件定盤">
             <p>會員報告儲存在個人帳號。經同意後，本站會將排盤結果交由 AI 整理。行事曆保存你選擇的命盤代碼與擇日日期，訂閱內容只列提醒與日期。你可在會員帳號重設連結及移除日期。</p>
             <p>事件定盤只在你的帳號保存輸入的事件年份與類型，用於比較候選時辰。可在事件定盤按「刪除事件資料」清除。</p>
+          </Section>
+        )}
+
+        {GA_ID && (
+          <Section title="流量分析">
+            <p>本站使用 Google Analytics 4 了解網站的使用情形，例如每天有多少人排盤、哪些功能常用、在哪一步離開，用來改善網站。會收集：</p>
+            <ul className="space-y-2">
+              <li>・瀏覽的頁面。送出前會先去掉網址 # 之後的生辰與報告代碼。</li>
+              <li>・用了哪些功能，例如排盤完成、打開報告、分享方式、登入方式（Google 或 Email）。</li>
+              <li>・裝置與瀏覽器類型、大致地區，以及從哪個網站來。</li>
+            </ul>
+            <p>
+              <strong className="font-medium text-ink">不會收集姓名、生辰、命盤內容、AI 提問內容、Email 或會員帳號識別碼。</strong>
+              Google Analytics 會在你的瀏覽器存放 Cookie（名稱以 _ga 開頭），用來區分不同的訪客；本站已關閉 Google 信號與廣告個人化，這些資料不會用於廣告，保存 14 個月後刪除。
+            </p>
+            <p>
+              不想被分析，可以開啟瀏覽器的追蹤保護、使用阻擋追蹤的擴充功能，或在電腦版瀏覽器安裝
+              <a href="https://tools.google.com/dlpage/gaoptout?hl=zh-TW" target="_blank" rel="noopener noreferrer" className="mx-1 font-medium text-accent underline underline-offset-4">停用 Google Analytics 外掛程式</a>
+              ，網站功能不受影響。
+            </p>
           </Section>
         )}
 

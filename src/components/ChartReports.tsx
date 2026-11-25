@@ -8,6 +8,7 @@ import type { Chart } from "@/lib/buildChart";
 import ReportLauncher from "@/components/ReportLauncher";
 import { MonthFocus } from "@/components/ReportReader";
 import { AI_ENABLED } from "@/lib/site";
+import { track } from "@/lib/analytics";
 
 /**
  * 命盤頁最下方的「會員功能」：流年報告預覽，以及流月報告、深度解盤可直接用這張命盤開啟；
@@ -38,7 +39,7 @@ export default function ChartReports({ chart }: { chart: Chart }) {
               </ReportLauncher>
             )}
           </div>
-          <details className="mt-1 text-sm text-ink-soft">
+          <details className="mt-1 text-sm text-ink-soft" onToggle={(e) => { if (e.currentTarget.open) track("report_preview", { report: "annual" }); }}>
             <summary className="min-h-11 cursor-pointer py-3 font-medium text-accent">預覽農曆正月</summary>
             <p className="mb-2 text-xs">{preview.januaryRange}</p>
             <MonthFocus focus={preview.january} />

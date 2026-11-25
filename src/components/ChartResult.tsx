@@ -18,6 +18,7 @@ import type { Chart } from "@/lib/buildChart";
 import { nowSelection } from "@/lib/periods";
 import { chartId, type SavedChart } from "@/lib/savedCharts";
 import { formatBirthSummary, MUTAGEN_STYLE, palaceTitle, rocYear, TIME_SLOTS } from "@/lib/ziwei";
+import { track } from "@/lib/analytics";
 
 type View = "chart" | "fortune" | "days" | "synastry" | "ai";
 
@@ -79,6 +80,7 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
   }
 
   function switchView(next: View) {
+    if (next !== view) track("tab_view", { tab: next });
     setView(next);
     // 頁面開著跨過時辰或午夜時，「現在」要跟著更新
     if (next === "fortune") {
@@ -147,7 +149,7 @@ export default function ChartResult({ chart: initialChart, loading, isSaved, sav
           {isSaved ? (
             <span role="status" className="px-2 text-xs font-medium text-ink-soft">{chart.variant === "alt" ? "已儲存原始生辰" : "已存到我的命盤"}</span>
           ) : (
-            <button type="button" className="action-primary" onClick={onSave}>{chart.variant === "alt" ? "儲存原始生辰" : "存到我的命盤"}</button>
+            <button type="button" className="action-primary" onClick={() => { onSave(); track("chart_save"); }}>{chart.variant === "alt" ? "儲存原始生辰" : "存到我的命盤"}</button>
           )}
           <ChartShare chart={chart} />
         </div>

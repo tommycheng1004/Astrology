@@ -17,6 +17,7 @@ import {
   type SavedChart,
 } from "@/lib/savedCharts";
 import { accountServerSnapshot, accountSnapshot, openAccountDialog, subscribeAccount } from "@/lib/account";
+import { track } from "@/lib/analytics";
 import { parseSharedChart } from "@/lib/shareLink";
 import { EngineLoadError, MAX_YEAR, MIN_YEAR } from "@/lib/ziwei";
 
@@ -73,11 +74,13 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
       });
       if (saved.timeMode === "unknown") {
         setChoices({ saved, list: await engine.buildTimeChoices(saved) });
+        track("chart_create", { source, time_known: false });
         setChart(null);
         setFormOpen(false);
         return;
       }
       const next = await engine.buildChart(saved, variant, source);
+      track("chart_create", { source, time_known: true });
       if (source === "form" && location.hash) history.replaceState(null, "", location.pathname + location.search);
       setInitialToday(today);
       setChoices(null);

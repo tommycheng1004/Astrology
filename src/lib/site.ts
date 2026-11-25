@@ -25,7 +25,7 @@ export const CONTENT_DATES = {
   palaces: { published: "2026-10-30", modified: "2026-11-01" },
   liunian: { published: "2026-11-11", modified: "2026-11-19" },
   taisui: { published: "2026-11-19", modified: "2026-11-20" },
-  privacy: { published: "2026-11-11", modified: "2026-11-24" },
+  privacy: { published: "2026-11-11", modified: "2026-11-25" },
 } as const;
 
 export type ContentSection = keyof typeof CONTENT_DATES;

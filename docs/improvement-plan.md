@@ -156,7 +156,7 @@ npx tsx scripts/check-birthtime.ts
 - 建立 Firebase 專案（步驟見 `docs/firebase-setup.md`）。
 - Gemini 開啟付費帳單（開放 AI 服務前確認；免費方案的條款不允許送出個人資料）。
 - 設定正式網域（`NEXT_PUBLIC_SITE_URL`）與聯絡信箱。
-- 決定要用哪個流量分析服務，才能追蹤「排盤 → 預覽 → 登入 → 閱讀完整報告」的轉換率。
+- 流量分析已選 GA4（程式已完成）：建立 GA4 資源、完成後台必要設定並在 Netlify 設定 `NEXT_PUBLIC_GA_ID`，步驟見 `docs/analytics.md`。
 
 ## 2026-11-24 差異化功能與驗收順序
 

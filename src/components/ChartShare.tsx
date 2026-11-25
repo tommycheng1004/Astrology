@@ -7,6 +7,7 @@ import type { Chart } from "@/lib/buildChart";
 import { chartText } from "@/lib/chartText";
 import { personalityHighlight } from "@/lib/chartHighlights";
 import { lineShareHref, shareUrl } from "@/lib/shareLink";
+import { track } from "@/lib/analytics";
 
 const item = "flex min-h-11 items-center rounded-lg px-2 text-left text-[15px] font-medium text-ink hover:bg-surface-2 disabled:opacity-60";
 
@@ -36,6 +37,7 @@ export default function ChartShare({ chart }: { chart: Chart }) {
         await navigator.clipboard.writeText(url);
         setStatus("已複製分享連結");
       }
+      track("share", { method: "link", content_type: "chart" });
     } catch (error) {
       if ((error as Error).name !== "AbortError") setStatus("無法分享連結，請確認瀏覽器的剪貼簿權限。");
     }
@@ -51,6 +53,7 @@ export default function ChartShare({ chart }: { chart: Chart }) {
     try {
       await navigator.clipboard.writeText(chartText(chart));
       setStatus("已複製 AI 文字盤");
+      track("share", { method: "text", content_type: "chart" });
     } catch {
       setStatus("無法複製，請確認瀏覽器的剪貼簿權限。");
     }
@@ -68,6 +71,7 @@ export default function ChartShare({ chart }: { chart: Chart }) {
       const alt = isPersona ? "命盤個性卡預覽" : "完整命盤圖片預覽";
       const file = new File([blob], isPersona ? "紫微命盤個性卡.png" : "紫微命盤.png", { type: "image/png" });
       if (dialogRef.current?.open) setImage({ file, url: URL.createObjectURL(file), alt });
+      track("share", { method: "image", content_type: isPersona ? "persona" : "chart" });
     } catch {
       setStatus("圖片產生失敗，請再試一次。");
     } finally {
@@ -104,7 +108,7 @@ export default function ChartShare({ chart }: { chart: Chart }) {
           <div className="grid gap-1">
             {personality && <button type="button" onClick={() => makeImage("persona")} disabled={busy} className="action-primary w-full">{busy ? "製作圖片中…" : "製作命盤個性卡"}</button>}
             <button type="button" onClick={shareLink} className={item}>分享命盤連結</button>
-            {active && <a href={lineShareHref(chart.saved, chart.variant)} target="_blank" rel="noopener noreferrer" className={item}>傳到 LINE</a>}
+            {active && <a href={lineShareHref(chart.saved, chart.variant)} target="_blank" rel="noopener noreferrer" onClick={() => track("share", { method: "line", content_type: "chart" })} className={item}>傳到 LINE</a>}
             <button type="button" onClick={() => makeImage("chart")} disabled={busy} className={item}>存成完整命盤圖片</button>
             {account.enabled && <button type="button" onClick={copyText} className={item}>複製 AI 文字盤</button>}
             <p className="mt-1 text-xs text-ink-soft">個性卡只含個性摘要。命盤連結含生辰，請分享給信任的人。</p>
