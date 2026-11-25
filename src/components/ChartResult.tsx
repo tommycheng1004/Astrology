@@ -20,7 +20,7 @@ import { chartId, type SavedChart } from "@/lib/savedCharts";
 import { formatBirthSummary, MUTAGEN_STYLE, palaceTitle, rocYear, TIME_SLOTS } from "@/lib/ziwei";
 import { track } from "@/lib/analytics";
 
-type View = "chart" | "fortune" | "days" | "synastry" | "ai";
+export type View = "chart" | "fortune" | "days" | "synastry" | "ai";
 
 /** AI 問答以環境變數開關，關閉時不顯示分頁，也不載入相關程式 */
 const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED === "1";
@@ -46,12 +46,16 @@ type Props = {
   /** 從流年頁（?liunian=2027）進來時，排盤後直接打開那一年的年運 */
   initialYear?: number;
   initialToday?: boolean;
+  /** 從首頁的快捷入口打開時，直接停在擇日、合盤或問 AI */
+  initialView?: View;
 };
 
 /** 排盤結果（命盤、運勢、擇日、合盤四個分頁）。只在排盤後才載入 */
-export default function ChartResult({ chart: initialChart, loading, isSaved, savedCharts, onSwitchVariant, onEditBirth, onSave, initialYear, initialToday }: Props) {
+export default function ChartResult({ chart: initialChart, loading, isSaved, savedCharts, onSwitchVariant, onEditBirth, onSave, initialYear, initialToday, initialView }: Props) {
   const [chart, setChart] = useState(initialChart);
-  const [view, setView] = useState<View>(initialYear || initialToday ? "fortune" : "chart");
+  const [view, setView] = useState<View>(() =>
+    initialYear || initialToday ? "fortune" : initialView && VIEWS.some((v) => v.id === initialView) ? initialView : "chart",
+  );
   const [fortuneOpened, setFortuneOpened] = useState(!!(initialYear || initialToday));
   const [todayRequest, setTodayRequest] = useState(initialToday ? 1 : 0);
   const [chartFirst, setChartFirst] = useState(() => {

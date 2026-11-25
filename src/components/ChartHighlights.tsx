@@ -42,7 +42,7 @@ export default function ChartHighlights({ chart, onToday }: { chart: Chart; onTo
         <div>
           <p className="text-sm font-bold text-[#e5d2f3]">今天提醒{today && <span className="font-normal"> · {today.date} {today.topic}</span>}</p>
           <p className="mt-1 text-sm leading-relaxed">{today?.text ?? "今日超出這張命盤的可推算期間。"}</p>
-          {today && <button type="button" onClick={onToday} className="-mb-2 inline-flex min-h-11 items-center text-sm font-bold text-[#f1d9ff] underline underline-offset-4">查看今天運勢 <span aria-hidden className="ml-1">↗</span></button>}
+          {today && <button type="button" onClick={onToday} className="-mb-2 inline-flex min-h-11 items-center text-sm font-bold text-[#f1d9ff] underline underline-offset-4">查看今天運勢 <span aria-hidden className="ml-1">→</span></button>}
         </div>
       </div>
     </section>

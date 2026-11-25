@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import BirthForm, { EMPTY_BIRTH, type BirthDraft, type SavedBirth } from "@/components/BirthForm";
+import type { HomeEntry } from "@/components/HomeDashboard";
 import type { Chart, TimeChoice } from "@/lib/buildChart";
 import {
   chartCaption,
@@ -28,7 +29,7 @@ import { EngineLoadError, MAX_YEAR, MIN_YEAR } from "@/lib/ziwei";
 const loadEngine = () => import("@/lib/buildChart");
 const loadResult = () => import("@/components/ChartResult");
 const ChartResult = dynamic(loadResult);
-const TodayOverview = dynamic(() => import("@/components/TodayOverview"), { loading: () => <p role="status" className="py-4 text-sm text-ink-soft">正在載入今日運勢…</p> });
+const HomeDashboard = dynamic(() => import("@/components/HomeDashboard"), { loading: () => <p role="status" className="py-4 text-sm text-ink-soft">正在載入你的命盤…</p> });
 const TimeChooser = dynamic(() => import("@/components/TimeChooser"));
 
 /** LINE 內建瀏覽器的 User-Agent 含「Line/版本」 */
@@ -49,7 +50,7 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState<boolean | null>(null);
-  const [initialToday, setInitialToday] = useState(false);
+  const [entry, setEntry] = useState<HomeEntry | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const inLine = useSyncExternalStore(noSubscribe, isLineBrowser, () => false);
   const account = useSyncExternalStore(subscribeAccount, accountSnapshot, accountServerSnapshot);
@@ -65,7 +66,7 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
   const showForm = formOpen ?? !returning;
   const showHome = !chart && !choices;
 
-  async function run(saved: SavedBirth, variant: Chart["variant"] = "main", source: Chart["source"] = "form", today = false) {
+  async function run(saved: SavedBirth, variant: Chart["variant"] = "main", source: Chart["source"] = "form", target: HomeEntry | null = null) {
     setLoading(true);
     setError(null);
     try {
@@ -82,7 +83,7 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
       const next = await engine.buildChart(saved, variant, source);
       track("chart_create", { source, time_known: true });
       if (source === "form" && location.hash) history.replaceState(null, "", location.pathname + location.search);
-      setInitialToday(today);
+      setEntry(target);
       setChoices(null);
       setChart(next);
       setFormOpen(false);
@@ -110,8 +111,8 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
     return () => window.removeEventListener("hashchange", openShared);
   }, []);
 
-  function openSaved(item: SavedChart, today = false) {
-    void run(item.saved, "main", "form", today);
+  function openSaved(item: SavedChart, target: HomeEntry | null = null) {
+    void run(item.saved, "main", "form", target);
   }
 
   function newChart() {
@@ -137,12 +138,15 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
   return (
     <>
       {showHome && returning && (
-        <div className="mx-auto w-full max-w-[60rem] px-4 pt-5 sm:px-6 sm:pt-8">
+        <div className="mx-auto w-full max-w-[60rem] px-4 pt-5 pb-10 sm:px-6 sm:pt-8">
           <h1 className="sr-only">紫微斗數免費排盤</h1>
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-            <TodayOverview key={charts[0].id} item={charts[0]} loading={loading} onOpen={() => openSaved(charts[0], true)} />
-            <MyCharts charts={charts} loading={loading} onOpen={openSaved} onNew={newChart} />
-          </div>
+          <HomeDashboard
+            key={charts[0].id}
+            item={charts[0]}
+            loading={loading}
+            onOpen={(target) => openSaved(charts[0], target)}
+            aside={<MyCharts charts={charts} loading={loading} onOpen={(c) => openSaved(c)} onNew={newChart} />}
+          />
           {!showForm && error && <p role="alert" className="mt-2 text-sm text-ji">{error}</p>}
         </div>
       )}
@@ -190,7 +194,8 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
           <MyCharts charts={charts} loading={loading} onOpen={openSaved} onNew={newChart} />
         </div>
       )}
-      {showHome && yearBanner && <div className="mx-auto mb-8 w-full max-w-[60rem] px-4 sm:px-6">{yearBanner}</div>}
+      {/* 回訪者的首頁已有個人化的流年與犯太歲，不再放給所有人看的通用入口 */}
+      {showHome && yearBanner && !returning && <div className="mx-auto mb-8 w-full max-w-[60rem] px-4 sm:px-6">{yearBanner}</div>}
 
       {choices && !chart && (
         <TimeChooser
@@ -215,8 +220,9 @@ export default function ZiweiApp({ intro, yearBanner, outro }: { intro: ReactNod
           onSwitchVariant={() => run(chart.saved, chart.variant === "main" ? "alt" : "main", chart.source)}
           onEditBirth={editBirth}
           onSave={() => upsertChart(chart.saved)}
-          initialYear={initialToday ? undefined : liunian ?? undefined}
-          initialToday={initialToday}
+          initialYear={entry?.today ? undefined : entry?.year ?? liunian ?? undefined}
+          initialToday={!!entry?.today}
+          initialView={entry?.view}
         />
       )}
 
@@ -240,17 +246,20 @@ function MyCharts({ charts, loading, onOpen, onNew }: { charts: SavedChart[]; lo
           {editing ? "完成" : "管理"}
         </button>
       </div>
-      <ul className="mt-1 flex max-h-56 flex-col gap-1 overflow-y-auto">
+      <ul className="mt-1 flex max-h-64 flex-col divide-y divide-line overflow-y-auto">
         {charts.map((c) => (
           <li key={c.id} className="flex items-center gap-2">
             <button
               type="button"
               disabled={loading || editing}
               onClick={() => onOpen(c)}
-              className="flex min-h-11 min-w-0 flex-1 flex-wrap items-center gap-x-2 rounded-lg px-2 text-left transition hover:bg-surface-2 disabled:hover:bg-transparent"
+              className="group flex min-h-12 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-surface-2 disabled:hover:bg-transparent"
             >
-              <span className="font-medium text-ink">{c.saved.input.name || "未命名"}</span>
-              <span className="text-sm text-muted">{chartCaption(c.saved)}</span>
+              <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
+                <span className="font-medium text-ink">{c.saved.input.name || "未命名"}</span>
+                <span className="text-sm text-muted">{chartCaption(c.saved)}</span>
+              </span>
+              {!editing && <span aria-hidden className="shrink-0 text-sm font-bold text-accent transition group-hover:translate-x-0.5">打開 ›</span>}
             </button>
             {editing && (
               <button
