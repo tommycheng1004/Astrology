@@ -9,7 +9,7 @@ import { accountServerSnapshot, accountSnapshot, openAccountDialog, subscribeAcc
 import { track } from "@/lib/analytics";
 import { AI_ENABLED } from "@/lib/site";
 import type { MonthReport, ReportKind, ReportRecord } from "@/lib/annualReport";
-import { memberFetch } from "@/lib/memberFetch";
+import { memberFetch, userMessage } from "@/lib/memberFetch";
 
 // 帶有排盤設定，訪客用不到，登入後才載入
 const ReportQuickOpen = dynamic(() => import("@/components/ReportQuickOpen"), {
@@ -78,7 +78,7 @@ export default function ReportReader({ info, kind }: { info: ReportInfo; kind: R
           delay = Math.min(delay * 2, 6000);
         }
       } catch (reason) {
-        if (!controller.signal.aborted) setLoaded({ uid: uid!, id, error: (reason as Error).message });
+        if (!controller.signal.aborted) setLoaded({ uid: uid!, id, error: userMessage(reason) });
       }
     }
     void refresh();

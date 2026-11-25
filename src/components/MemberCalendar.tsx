@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { memberFetch } from "@/lib/memberFetch";
+import { memberFetch, userMessage } from "@/lib/memberFetch";
 
 type Settings = { token?: string; dates: string[]; hasChart: boolean };
 const button = "inline-flex min-h-11 items-center justify-center rounded-lg border border-line px-3 text-sm font-bold text-accent disabled:opacity-60";
@@ -43,7 +43,7 @@ export default function MemberCalendar({ revision = 0 }: { revision?: number }) 
       setSettings(await updateCalendar(action, { date }));
       setStatus(action === "reset" ? "已建立新的訂閱連結。" : "已移除日期。");
     } catch (error) {
-      setStatus((error as Error).message);
+      setStatus(userMessage(error));
     } finally {
       setBusy(false);
     }

@@ -7,7 +7,7 @@ import ActionSheet from "@/components/ActionSheet";
 import { rememberDeepReport } from "@/components/DeepReportNotice";
 import { accountServerSnapshot, accountSnapshot, closeAccountDialog, openAccountDialog, subscribeAccount } from "@/lib/account";
 import { ANNUAL_REPORT, type ReportKind } from "@/lib/annualReport";
-import { memberFetch } from "@/lib/memberFetch";
+import { memberFetch, userMessage } from "@/lib/memberFetch";
 import { shareHash } from "@/lib/shareLink";
 import { AI_ENABLED } from "@/lib/site";
 import { track } from "@/lib/analytics";
@@ -44,7 +44,7 @@ export default function ReportLauncher({ saved, variant = "main", kind, children
       if (kind === "deep") rememberDeepReport(uid, data.id, data.status === "ready");
       router.push(`/report/${kind === "annual" ? ANNUAL_REPORT : kind}?record=${data.id}`);
     } catch (reason) {
-      setError((reason as Error).message);
+      setError(userMessage(reason));
     } finally {
       setBusy(false);
     }

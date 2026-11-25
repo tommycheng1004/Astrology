@@ -13,6 +13,7 @@ type Stored = ReportRecord & { job?: string };
 const recoverAfter = 120_000;
 
 export async function POST(request: Request) {
+  const started = Date.now();
   const member = await requestMember(request);
   if (!member) return privateJson({ error: "請先登入會員。" }, 401);
   if (!usageConfigured) return notConfigured("報告");
@@ -77,7 +78,9 @@ export async function POST(request: Request) {
     }
     const latest = await readDocument<Stored>(path);
     if (latest?.data.job === pending.job) await writeDocuments([{ path, data: final, version: latest.version }]);
+    console.info("[reports] finished", { kind, status: final.status, narrative: !!(final.status === "ready" && final.narrative), ms: Date.now() - started });
   });
 
+  console.info("[reports] accepted", { kind, withNarrative, ms: Date.now() - started });
   return privateJson({ id, status: "pending" }, 202);
 }

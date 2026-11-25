@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { accountServerSnapshot, accountSnapshot, openAccountDialog, subscribeAccount } from "@/lib/account";
 import type { SavedBirth } from "@/components/BirthForm";
-import { memberFetch } from "@/lib/memberFetch";
+import { memberFetch, userMessage } from "@/lib/memberFetch";
 import { LIFE_EVENTS, type BirthRanking, type LifeEvent } from "@/lib/rectification";
 import { shareHash } from "@/lib/shareLink";
 
@@ -71,7 +71,7 @@ function EventForm({ saved, onPick }: { saved: SavedBirth; onPick?: (timeIndex: 
         setStatus("候選時辰已排序。");
       }
     } catch (error) {
-      setStatus((error as Error).message);
+      setStatus(userMessage(error));
     } finally {
       setBusy(false);
     }

@@ -62,7 +62,7 @@ export function annualReport(astrolabe: Astrolabe) {
     })),
     days: PURPOSES.map((purpose) => ({
       purpose: purpose.label,
-      dates: pickDays(astrolabe, purpose.id, span, from, undefined, scores).best.slice(0, 3).map(({ date }) => date),
+      dates: pickDays(astrolabe, purpose.id, span, from, undefined, scores, false).best.slice(0, 3).map(({ date }) => date),
     })),
   };
 }

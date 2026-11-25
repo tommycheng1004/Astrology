@@ -170,8 +170,12 @@ export function dateScores(astrolabe: Astrolabe, span: number, from: Date) {
   return scores;
 }
 
-/** partnerBranch 是結婚對象的生年地支，沖對方的日子也不推薦。 */
-export function pickDays(astrolabe: Astrolabe, purposeId: string, span: number, from = new Date(), partnerBranch?: string, scores = dateScores(astrolabe, span, from)) {
+/**
+ * partnerBranch 是結婚對象的生年地支，沖對方的日子也不推薦。
+ * withHours=false 時不算推薦日的最佳時辰（每天 12 個時辰的運限，是擇日最花時間的部分）；
+ * 流年報告只列日期，不需要時辰。
+ */
+export function pickDays(astrolabe: Astrolabe, purposeId: string, span: number, from = new Date(), partnerBranch?: string, scores = dateScores(astrolabe, span, from), withHours = true) {
   const purpose = PURPOSES.find((p) => p.id === purposeId) ?? PURPOSES[0];
   const birthBranch = astrolabe.rawDates.chineseDate.yearly[1];
   const days: DayPick[] = [];
@@ -203,7 +207,7 @@ export function pickDays(astrolabe: Astrolabe, purposeId: string, span: number, 
   const candidates = sorted.filter((d) => !blocked(d));
   const bestCount = Math.min(5, Math.ceil(sorted.length / 2), candidates.length);
   const bestDays = candidates.slice(0, bestCount);
-  const best = bestDays.map((d) => ({ ...d, reason: reasonOf(d, "good"), bestHours: bestHoursOf(astrolabe, d.date, purpose.keys) }));
+  const best = bestDays.map((d) => ({ ...d, reason: reasonOf(d, "good"), bestHours: withHours ? bestHoursOf(astrolabe, d.date, purpose.keys) : [] }));
   const avoid = sorted
     .filter((d) => !bestDays.includes(d))
     .slice(-3)

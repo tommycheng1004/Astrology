@@ -11,6 +11,7 @@ import { yearGanzhi } from "@/lib/periods";
 import { chartCaption, type SavedChart } from "@/lib/savedCharts";
 import { ZODIAC } from "@/lib/taisui";
 import type { Astrolabe } from "@/lib/ziwei";
+import { userMessage } from "@/lib/memberFetch";
 
 const SPANS = [30, 60, 90];
 const BRANCHES = "子丑寅卯辰巳午未申酉戌亥";
@@ -288,7 +289,7 @@ function SaveCalendarDay({ date }: { date: string }) {
       await updateCalendar("save", { date });
       setStatus("已存到會員行事曆。");
     } catch (error) {
-      setStatus((error as Error).message);
+      setStatus(userMessage(error));
     } finally {
       setBusy(false);
     }

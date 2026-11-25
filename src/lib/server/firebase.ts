@@ -26,12 +26,18 @@ export const usageConfigured = !!PROJECT_ID && (isLocal(FIRESTORE_EMULATOR) || (
 
 // ---------- 驗證 ID token（依 Firebase 文件：以第三方 JWT 函式庫驗證） ----------
 
+/**
+ * 連 Google（公鑰、服務帳戶授權、Firestore）的逾時。沒設逾時的話，偶發卡住的連線會一路等到
+ * Netlify 伺服器函式的 60 秒上限被強制中止，瀏覽器只看到「Failed to fetch」（2026-11-25 正式站實際發生）。
+ */
+const googleTimeout = () => AbortSignal.timeout(10_000);
+
 const CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
 let certs: { keys: Map<string, CryptoKey>; expires: number } | null = null;
 
 async function publicKey(kid: string | undefined) {
   if (!certs || Date.now() > certs.expires) {
-    const res = await fetch(CERTS_URL, { cache: "no-store" });
+    const res = await fetch(CERTS_URL, { cache: "no-store", signal: googleTimeout() });
     if (!res.ok) throw new Error(`無法取得 Firebase 公鑰：${res.status}`);
     const maxAge = Number(/max-age=(\d+)/.exec(res.headers.get("cache-control") ?? "")?.[1] ?? 3600);
     const pems = (await res.json()) as Record<string, string>;
@@ -104,6 +110,7 @@ async function accessToken() {
     .sign(key);
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
+    signal: googleTimeout(),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
   });
@@ -127,6 +134,7 @@ export async function firestoreFetch(suffix: string, body?: unknown) {
     headers: { Authorization: `Bearer ${await accessToken()}`, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
+    signal: googleTimeout(),
   });
 }
 
@@ -139,6 +147,7 @@ async function addUsage(id: string, delta: number, expireAt: Date) {
   const [date, kind] = id.split("_");
   const res = await fetch(`${apiBase()}/${documentsPath()}:commit`, {
     method: "POST",
+    signal: googleTimeout(),
     headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       writes: [
@@ -231,6 +240,7 @@ export async function readDocument<T>(path: string[]): Promise<{ data: T; versio
   const res = await fetch(documentUrl(path), {
     headers: { Authorization: `Bearer ${await accessToken()}` },
     cache: "no-store",
+    signal: googleTimeout(),
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Firestore read failed: ${res.status}`);
@@ -244,6 +254,7 @@ type DocumentWrite = { path: string[]; data?: unknown; version?: string | false 
 export async function writeDocuments(writes: DocumentWrite[]): Promise<boolean> {
   const res = await fetch(`${apiBase()}/${documentsPath()}:commit`, {
     method: "POST",
+    signal: googleTimeout(),
     headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       writes: writes.map(({ path, data, version }) => ({

@@ -9,6 +9,7 @@ import { accountServerSnapshot, accountSnapshot, openAccountDialog, subscribeAcc
 import { chartCaption, parseCharts, readChartsRaw, subscribeCharts } from "@/lib/savedCharts";
 import { shareHash } from "@/lib/shareLink";
 import { AI_ENABLED } from "@/lib/site";
+import { userMessage } from "@/lib/memberFetch";
 
 const EventRectification = dynamic(() => import("@/components/EventRectification"));
 
@@ -82,7 +83,7 @@ function MemberTools() {
       setCalendarRevision((revision) => revision + 1);
       setStatus("已設定流月提醒。展開下方的行事曆取得訂閱連結。");
     } catch (error) {
-      setStatus((error as Error).message);
+      setStatus(userMessage(error));
     } finally {
       setSaving(false);
     }
